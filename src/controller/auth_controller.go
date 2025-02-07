@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"app/src/config"
+
 	"app/src/model"
 	"app/src/response"
 	"app/src/service"
 	"app/src/validation" 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
+
 )
 
 type AuthController struct {
@@ -269,24 +269,3 @@ func (a *AuthController) VerifyEmail(c *fiber.Ctx) error {
 			Message: "Verify email successfully",
 		})
 }
-
-// @Tags         Auth
-// @Summary      Login with google
-// @Description  This route initiates the Google OAuth2 login flow. Please try this in your browser.
-// @Router       /auth/google [get]
-// @Success      200  {object}  example.GoogleLoginResponse
-func (a *AuthController) GoogleLogin(c *fiber.Ctx) error {
-	// Generate a random state
-	state := uuid.New().String()
-
-	c.Cookie(&fiber.Cookie{
-		Name:   "oauth_state",
-		Value:  state,
-		MaxAge: 30,
-	})
-
-	url := config.AppConfig.GoogleLoginConfig.AuthCodeURL(state)
-
-	return c.Status(fiber.StatusSeeOther).Redirect(url)
-}
- 

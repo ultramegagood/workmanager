@@ -15,9 +15,7 @@ func AuthRoutes(
 ) {
 	authController := controller.NewAuthController(a, u, t, e)
 	config.GoogleConfig()
-
 	auth := v1.Group("/auth")
-
 	auth.Post("/register", authController.Register)
 	auth.Post("/login", authController.Login)
 	auth.Post("/logout", authController.Logout)
@@ -26,5 +24,4 @@ func AuthRoutes(
 	auth.Post("/reset-password", authController.ResetPassword)
 	auth.Post("/send-verification-email", m.Auth(u), authController.SendVerificationEmail)
 	auth.Post("/verify-email", authController.VerifyEmail)
-	auth.Get("/google", authController.GoogleLogin)
 }
