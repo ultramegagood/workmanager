@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Comment struct {
@@ -14,4 +15,8 @@ type Comment struct {
 	ReplyToID     *uuid.UUID `json:"reply_to_id,omitempty"`
 	IsEdited      bool      `gorm:"default:false" json:"is_edited"`
 	DeletedAt     *time.Time `json:"deleted_at,omitempty"`
+}
+func (token *Comment) BeforeCreate(_ *gorm.DB) error {
+	token.ID = uuid.New()
+	return nil
 }

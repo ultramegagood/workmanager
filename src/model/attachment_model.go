@@ -1,6 +1,9 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 
 
@@ -13,4 +16,9 @@ type Attachment struct {
 	Size            int       `json:"size"`
 	LinkedTaskID    *uuid.UUID `json:"linked_task_id,omitempty"`
 	LinkedCommentID *uuid.UUID `json:"linked_comment_id,omitempty"`
+}
+
+func (token *Attachment) BeforeCreate(_ *gorm.DB) error {
+	token.ID = uuid.New()
+	return nil
 }

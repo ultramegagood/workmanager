@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type AuditLog struct {
@@ -14,4 +15,8 @@ type AuditLog struct {
 	EntityType string    `gorm:"not null" json:"entity_type"`
 	EntityID   uuid.UUID `gorm:"not null" json:"entity_id"`
 	CreatedAt  time.Time `gorm:"autoCreateTime:milli" json:"created_at"`
+}
+func (token *AuditLog) BeforeCreate(_ *gorm.DB) error {
+	token.ID = uuid.New()
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 type Task struct {
 	ID          uuid.UUID `gorm:"primaryKey;not null" json:"id"`
@@ -17,4 +18,8 @@ type Task struct {
 	ParentTaskID *uuid.UUID `json:"parent_task_id,omitempty"`
 	EstimatedTime int      `json:"estimated_time"`
 	SpentTime     int      `json:"spent_time"`
+}
+func (token *Task) BeforeCreate(_ *gorm.DB) error {
+	token.ID = uuid.New()
+	return nil
 }

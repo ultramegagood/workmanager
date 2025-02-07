@@ -1,6 +1,8 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type TaskProject struct {
 	TaskID   uuid.UUID `gorm:"not null" json:"task_id"`
