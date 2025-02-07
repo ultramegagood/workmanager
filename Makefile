@@ -32,3 +32,5 @@ docker-down:
 	@docker-compose down --rmi all --volumes --remove-orphans
 docker-cache:
 	@docker builder prune -f
+commit-%:
+	@git add . && git commit -m '$(subst :,_,$*)'
