@@ -24,4 +24,5 @@ func AuthRoutes(
 	auth.Post("/reset-password", authController.ResetPassword)
 	auth.Post("/send-verification-email", m.Auth(u), authController.SendVerificationEmail)
 	auth.Post("/verify-email", authController.VerifyEmail)
+	
 }

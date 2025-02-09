@@ -1,7 +1,8 @@
 package config
 
+
 var allRoles = map[string][]string{
-	"user":  {},
+	"user":  {"comment","task_role_edit", },
 	"admin": {"getUsers", "manageUsers"},
 }
 
