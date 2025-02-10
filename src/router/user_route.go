@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func UserRoutes(v1 fiber.Router, u service.UserService, t service.TokenService,task service.TaskService) {
+func UserRoutes(v1 fiber.Router, u service.UserService, t service.TokenService, task service.TaskService) {
 	userController := controller.NewUserController(u, t)
 
 	user := v1.Group("/users")
@@ -22,6 +22,7 @@ func UserRoutes(v1 fiber.Router, u service.UserService, t service.TokenService,t
 	user.Patch("/:userId", m.Auth(u, "manageUsers"), userController.UpdateUser)
 	user.Delete("/:userId", m.Auth(u, "manageUsers"), userController.DeleteUser)
 	user.Get("/ws/:user_id", websocket.New(func(c *websocket.Conn) {
+		
 		userID, err := uuid.Parse(c.Params("user_id"))
 		if err != nil {
 			log.Println("Invalid user ID")
