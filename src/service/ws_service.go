@@ -9,11 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// Клиенты WebSocket {userID: connection}
+// Хранилище WebSocket клиентов {userID: connection}
 var clients = make(map[uuid.UUID]*websocket.Conn)
-var lock = sync.Mutex{}
+var lock sync.Mutex
 
-// WebSocket сообщение
+// Структура сообщения WebSocket
 type WSMessage struct {
 	TaskID      uuid.UUID `json:"task_id"`
 	ProjectID   uuid.UUID `json:"project_id"`
@@ -26,28 +26,36 @@ type WSMessage struct {
 // Добавление клиента в WebSocket
 func AddClient(userID uuid.UUID, conn *websocket.Conn) {
 	lock.Lock()
+	defer lock.Unlock()
 	clients[userID] = conn
-	lock.Unlock()
 }
 
 // Удаление клиента
 func RemoveClient(userID uuid.UUID) {
 	lock.Lock()
-	delete(clients, userID)
-	lock.Unlock()
+	defer lock.Unlock()
+	if conn, exists := clients[userID]; exists {
+		conn.Close()
+		delete(clients, userID)
+	}
 }
 
-// Отправка обновлений всем пользователям, имеющим доступ
+// Отправка обновлений только пользователям с доступом
 func BroadcastUpdate(msg WSMessage, allowedUsers []uuid.UUID) {
-	data, _ := json.Marshal(msg)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("Error marshalling WebSocket message:", err)
+		return
+	}
 
 	lock.Lock()
+	defer lock.Unlock()
 	for _, userID := range allowedUsers {
 		if conn, exists := clients[userID]; exists {
 			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				log.Println("WebSocket send error:", err)
+				RemoveClient(userID) // Если ошибка, удаляем клиента
 			}
 		}
 	}
-	lock.Unlock()
 }

@@ -4,7 +4,6 @@ import "github.com/google/uuid"
 
 type CreateProject struct {
 	Title    string      `json:"title" validate:"required,max=50" example:"fake name"`
-	GroupIDs []uuid.UUID `json:"group_ids"` // Было []string
 }
 
 type CreateGroup struct {

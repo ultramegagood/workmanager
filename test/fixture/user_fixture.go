@@ -7,25 +7,31 @@ import (
 )
 
 var UserOne = &model.User{
-	ID:            uuid.New(),
-	Name:          "Test1",
-	Email:         "test1@gmail.com",
-	Password:      "password1",
-	Role:          "user",
- }
+	BaseModel: model.BaseModel{
+		ID: uuid.New(),
+	},
+	Name:     "Test1",
+	Email:    "test1@gmail.com",
+	Password: "password1",
+	Role:     "user",
+}
 
 var UserTwo = &model.User{
-	ID:            uuid.New(),
-	Name:          "Test2",
-	Email:         "test2@gmail.com",
-	Password:      "password1",
-	Role:          "user",
- }
+	BaseModel: model.BaseModel{
+		ID: uuid.New(),
+	},
+	Name:     "Test2",
+	Email:    "test2@gmail.com",
+	Password: "password1",
+	Role:     "user",
+}
 
 var Admin = &model.User{
-	ID:            uuid.New(),
-	Name:          "Admin",
-	Email:         "admin@gmail.com",
-	Password:      "password1",
-	Role:          "admin",
- }
+	BaseModel: model.BaseModel{
+		ID: uuid.New(),
+	},
+	Name:     "Admin",
+	Email:    "admin@gmail.com",
+	Password: "password1",
+	Role:     "admin",
+}
