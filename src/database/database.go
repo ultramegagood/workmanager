@@ -2,8 +2,10 @@ package database
 
 import (
 	"app/src/config"
+
 	"app/src/utils"
 	"fmt"
+
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -36,6 +38,6 @@ func Connect(dbHost, dbName string) *gorm.DB {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(60 * time.Minute)
-
+	
 	return db
 }

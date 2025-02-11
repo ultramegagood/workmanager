@@ -14,8 +14,8 @@ type Token struct {
 	Type      string    `gorm:"not null"`
 	Expires   time.Time `gorm:"not null"`
 	CreatedAt time.Time `gorm:"autoCreateTime:milli"`
-	UpdatedAt time.Time `gorm:"autoCreateTime:milli;autoUpdateTime:milli"`
-	User      *User     `gorm:"foreignKey:user_id;references:id"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime:milli"`
+	User      *User     `gorm:"foreignKey:UserID;references:ID"`
 }
 
 func (token *Token) BeforeCreate(_ *gorm.DB) error {

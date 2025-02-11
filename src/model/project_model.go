@@ -6,9 +6,8 @@ import (
 )
 
 type Project struct {
-	ID       uuid.UUID `gorm:"primaryKey;not null" json:"id"`
-	Title    string    `gorm:"" json:"title" `
-	GroupIDs []string  `gorm:"type:uuid[]" json:"group_ids"`
+	ID    uuid.UUID `gorm:"primaryKey;not null" json:"id"`
+	Title string    `json:"title"`
 }
 
 func (token *Project) BeforeCreate(_ *gorm.DB) error {

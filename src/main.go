@@ -4,10 +4,12 @@ import (
 	"app/src/config"
 	"app/src/database"
 	"app/src/middleware"
+
 	"app/src/router"
 	"app/src/utils"
 	"context"
 	"fmt"
+
 	"os"
 	"os/signal"
 	"syscall"

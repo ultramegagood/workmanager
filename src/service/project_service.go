@@ -3,7 +3,6 @@ package service
 import (
 	"app/src/model"
 	"app/src/validation"
-	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -41,7 +40,6 @@ func (s *taskService) CreateProject(c *fiber.Ctx, req *validation.CreateProject)
 
 	project := &model.Project{
 		Title:    req.Title,
-		GroupIDs: req.GroupIDs,
 	}
 
 	result := s.DB.WithContext(c.Context()).Create(project)
@@ -54,20 +52,25 @@ func (s *taskService) CreateProject(c *fiber.Ctx, req *validation.CreateProject)
 }
 
 func (s *taskService) CreateTask(c *fiber.Ctx, req *validation.CreateTask) (*model.Task, error) {
-	if err := s.Validate.Struct(req); err != nil {
-		return nil, err
-	}
+    if err := s.Validate.Struct(req); err != nil {
+        return nil, err
+    }
 
-	task := &model.Task{}
+    task := &model.Task{
+        Title:       req.Title,
+        Description: req.Description,
+        ProjectID:   req.ProjectID,
+    }
 
-	result := s.DB.WithContext(c.Context()).Create(task)
-	if result.Error != nil {
-		s.Log.Errorf("Failed to create task: %+v", result.Error)
-		return nil, result.Error
-	}
+    result := s.DB.WithContext(c.Context()).Create(task)
+    if result.Error != nil {
+        s.Log.Errorf("Failed to create task: %+v", result.Error)
+        return nil, result.Error
+    }
 
-	return task, nil
+    return task, nil
 }
+
 
 func (s *taskService) CreateTaskSupport(c *fiber.Ctx, req *validation.CreateTask) (*model.Task, error) {
 	if err := s.Validate.Struct(req); err != nil {
@@ -77,7 +80,7 @@ func (s *taskService) CreateTaskSupport(c *fiber.Ctx, req *validation.CreateTask
 	task := &model.Task{
 		Title:       req.Title,
 		Description: req.Description,
-		ProjectID:   uuid.MustParse(req.ProjectID),
+		ProjectID:   req.ProjectID,
 	}
 
 	result := s.DB.WithContext(c.Context()).Create(task)
@@ -93,11 +96,11 @@ func (s *taskService) CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*m
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
 	}
-
 	group := &model.Group{
-		Title: req.Title,
+		Title:     req.Title,
+		ProjectID: req.ProjectID,
 	}
-
+	
 	result := s.DB.WithContext(c.Context()).Create(group)
 	if result.Error != nil {
 		s.Log.Errorf("Failed to create group: %+v", result.Error)
@@ -108,17 +111,16 @@ func (s *taskService) CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*m
 }
 
 func (s *taskService) GetUsersWithAccess(taskID uuid.UUID) []uuid.UUID {
-	var userIDs []uuid.UUID
+    var userIDs []uuid.UUID = []uuid.UUID{}
 
-	// Запрос к БД: найти `user_group`, связанную с `taskID`
-	err := s.DB.Raw(`
-		SELECT user_id FROM user_groups 
-		WHERE id IN (SELECT user_group FROM tasks WHERE id = ?)
-	`, taskID).Scan(&userIDs).Error
+    err := s.DB.Raw(`
+        SELECT user_id FROM user_groups 
+        WHERE id IN (SELECT user_group FROM tasks WHERE id = ?)
+    `, taskID).Scan(&userIDs).Error
 
-	if err != nil {
-		log.Println("DB error:", err)
-	}
+    if err != nil {
+        s.Log.Errorf("DB error: %+v", err)
+    }
 
-	return userIDs
+    return userIDs
 }

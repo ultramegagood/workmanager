@@ -8,12 +8,12 @@ import (
 )
 
 type Task struct {
-	ID            uuid.UUID  `gorm:"primaryKey;" json:"id"`
-	ProjectID     uuid.UUID  `gorm:"" json:"project_id"`
-	Title         string     `gorm:"" json:"title"`
-	Description   string     `gorm:"" json:"description"`
+	ID            uuid.UUID  `gorm:"primaryKey;not null" json:"id"`
+	ProjectID     uuid.UUID  `json:"project_id"`
+	Title         string     `json:"title"`
+	Description   string     `json:"description"`
 	UserGroup     uuid.UUID  `json:"user_group"`
-	Status        string     `gorm:"" json:"status"`
+	Status        string     `json:"status"`
 	Priority      string     `json:"priority"`
 	DueDate       time.Time  `json:"due_date"`
 	CreatedAt     time.Time  `gorm:"autoCreateTime:milli" json:"created_at"`
@@ -22,7 +22,6 @@ type Task struct {
 	EstimatedTime int        `json:"estimated_time"`
 	SpentTime     int        `json:"spent_time"`
 }
-
 func (token *Task) BeforeCreate(_ *gorm.DB) error {
 	token.ID = uuid.New()
 	return nil
