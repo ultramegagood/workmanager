@@ -37,7 +37,7 @@ services:
     build: .
     image: go-app
     ports:
-      - ${APP_PORT}:8080
+      - 8080:8080
     depends_on:
       postgresdb:
         condition: service_healthy
