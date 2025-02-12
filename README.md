@@ -167,7 +167,7 @@ The environment variables can be found and modified in the `.env` file. They com
 # Env value : prod || dev
 APP_ENV=dev
 APP_HOST=0.0.0.0
-APP_PORT=3000
+APP_PORT=8080
 
 # database configuration
 DB_HOST=postgresdb
@@ -198,7 +198,7 @@ EMAIL_FROM=support@yourapp.com
 # OAuth2 configuration
 GOOGLE_CLIENT_ID=yourapps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=thisisasamplesecret
-REDIRECT_URL=http://localhost:3000/v1/auth/google-callback
+REDIRECT_URL=http://localhost:8080/v1/auth/google-callback
 ```
 
 ## Project Structure
@@ -221,7 +221,7 @@ src\
 
 ## API Documentation
 
-To view the list of available APIs and their specifications, run the server and go to `http://localhost:3000/v1/docs` in your browser.
+To view the list of available APIs and their specifications, run the server and go to `http://localhost:8080/v1/docs` in your browser.
 
 ![Auth](https://indrayyana.github.io/assets/images/swagger1.png)
 ![User](https://indrayyana.github.io/assets/images/swagger2.png)
