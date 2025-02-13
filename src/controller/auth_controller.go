@@ -269,3 +269,24 @@ func (a *AuthController) VerifyEmail(c *fiber.Ctx) error {
 			Message: "Verify email successfully",
 		})
 }
+// @Tags         Auth
+// @Summary      Get current user
+// @Security     BearerAuth
+// @Produce      json
+// @Router       /auth/me [get]
+// @Success      200  {object}  response.SuccessWithCurrentUser
+// @Failure      401  {object}  example.Unauthorized  "Unauthorized"
+func (a *AuthController) GetCurrentUser(c *fiber.Ctx) error {
+	user, err := a.AuthService.GetCurrentUser(c)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).
+		JSON(response.SuccessWithCurrentUser{
+			Code:    fiber.StatusOK,
+			Status:  "success",
+			Message: "User retrieved successfully",
+			User:    *user,
+		})
+}

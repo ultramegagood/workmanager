@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/gofiber/websocket/v2"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +13,7 @@ import (
 var clients = make(map[uuid.UUID]*websocket.Conn)
 var lock sync.Mutex
 
-// Структура сообщения WebSocket
+// Структура WebSocket-сообщения
 type WSMessage struct {
 	TaskID      uuid.UUID `json:"task_id"`
 	ProjectID   uuid.UUID `json:"project_id"`
@@ -23,11 +23,23 @@ type WSMessage struct {
 	UserID      uuid.UUID `json:"user_id"`
 }
 
-// Добавление клиента в WebSocket
+// Добавление клиента в WebSocket (с автоматическим удалением при закрытии)
 func AddClient(userID uuid.UUID, conn *websocket.Conn) {
 	lock.Lock()
-	defer lock.Unlock()
 	clients[userID] = conn
+	lock.Unlock()
+
+	// Удаление клиента при закрытии соединения
+	defer RemoveClient(userID)
+
+	// Чтение входящих сообщений (если нужно)
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("WebSocket closed for user %s: %v", userID, err)
+			break
+		}
+	}
 }
 
 // Удаление клиента
@@ -48,10 +60,17 @@ func BroadcastUpdate(msg WSMessage, allowedUsers []uuid.UUID) {
 		return
 	}
 
+	// Создадим быстрый lookup map для O(1) поиска
+	allowedMap := make(map[uuid.UUID]struct{})
+	for _, userID := range allowedUsers {
+		allowedMap[userID] = struct{}{}
+	}
+
+	// Пройдёмся по всем клиентам, а не по списку allowedUsers
 	lock.Lock()
 	defer lock.Unlock()
-	for _, userID := range allowedUsers {
-		if conn, exists := clients[userID]; exists {
+	for userID, conn := range clients {
+		if _, allowed := allowedMap[userID]; allowed {
 			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				log.Println("WebSocket send error:", err)
 				RemoveClient(userID) // Если ошибка, удаляем клиента

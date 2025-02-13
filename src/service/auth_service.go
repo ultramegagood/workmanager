@@ -21,6 +21,8 @@ type AuthService interface {
 	RefreshAuth(c *fiber.Ctx, req *validation.RefreshToken) (*response.Tokens, error)
 	ResetPassword(c *fiber.Ctx, query *validation.Token, req *validation.UpdatePassOrVerify) error
 	VerifyEmail(c *fiber.Ctx, query *validation.Token) error
+	GetCurrentUser(c *fiber.Ctx) (*model.User, error)
+
 }
 
 type authService struct {
@@ -182,3 +184,34 @@ func (s *authService) VerifyEmail(c *fiber.Ctx, query *validation.Token) error {
 
 	return nil
 }
+func (s *authService) GetCurrentUser(c *fiber.Ctx) (*model.User, error) {
+	// Получаем токен из заголовка Authorization
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return nil, fiber.NewError(fiber.StatusUnauthorized, "Missing Authorization header")
+	}
+
+	// Проверяем, начинается ли заголовок с "Bearer "
+	if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+		return nil, fiber.NewError(fiber.StatusUnauthorized, "Invalid token format")
+	}
+
+	// Извлекаем сам токен
+	tokenString := authHeader[7:]
+
+	// Проверяем и извлекаем userID из токена
+	userID, err := utils.VerifyToken(tokenString, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+
+	// Получаем пользователя из базы данных
+	user, err := s.UserService.GetUserByID(c, userID)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "User not found")
+	}
+
+	return user, nil
+}
+
+

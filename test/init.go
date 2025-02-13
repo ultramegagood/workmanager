@@ -12,6 +12,7 @@ import (
 var App = fiber.New(fiber.Config{
 	CaseSensitive: true,
 	ErrorHandler:  utils.ErrorHandler,
+	EnablePrintRoutes: true,
 })
 var DB *gorm.DB
 var Log = utils.Log

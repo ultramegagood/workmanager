@@ -5,6 +5,8 @@ import (
 	"app/src/database"
 	"app/src/middleware"
 
+	"strings"
+
 	"app/src/router"
 	"app/src/utils"
 	"context"
@@ -14,10 +16,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cache"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
+
 	"gorm.io/gorm"
 )
 
@@ -56,8 +61,29 @@ func setupFiberApp() *fiber.App {
 	app.Use(middleware.LoggerConfig())
 	app.Use(helmet.New())
 	app.Use(compress.New())
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3001, http://your-frontend.com",
+		AllowCredentials: true,
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+	}))
+
 	app.Use(middleware.RecoverConfig())
+	app.Use(cache.New(cache.Config{
+		Next: func(c *fiber.Ctx) bool {
+			return strings.Contains(c.Route().Path, "/ws")
+		},
+	}))
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		// Проверяем, является ли запрос WebSocket-подключением
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	router.SetupWebSocketRoutes(app)
+
 
 	return app
 }

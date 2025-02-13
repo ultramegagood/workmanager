@@ -62,6 +62,12 @@ type Common struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }
+type SuccessWithCurrentUser struct {
+	Code    int        `json:"code"`
+	Status  string     `json:"status"`
+	Message string     `json:"message"`
+	User    model.User `json:"user"`
+}
 
 type SuccessWithUser struct {
 	Code    int        `json:"code"`

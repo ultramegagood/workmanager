@@ -4,6 +4,7 @@ import "github.com/google/uuid"
 
 type CreateProject struct {
 	Title    string      `json:"title" validate:"required,max=50" example:"fake name"`
+	TemplateId uuid.UUID  `json:"template_id" validate:"required"`
 }
 
 type CreateGroup struct {

@@ -23,6 +23,7 @@ func init() {
 			ForceColors:     true,
 		},
 	})
+    Log.SetLevel(logrus.DebugLevel) // Уровень логирования
 
 	Log.SetOutput(os.Stdout)
 }
