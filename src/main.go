@@ -4,6 +4,7 @@ import (
 	"app/src/config"
 	"app/src/database"
 	"app/src/middleware"
+	"app/src/model"
 
 	"strings"
 
@@ -91,6 +92,28 @@ func setupFiberApp() *fiber.App {
 func setupDatabase() *gorm.DB {
 	db := database.Connect(config.DBHost, config.DBName)
 	// Add any additional database setup if needed
+	// Выполнение автомиграций
+
+	err := db.AutoMigrate(
+		&model.User{},
+		&model.Token{},
+		&model.Project{},
+		&model.Group{},
+		&model.Task{},
+		&model.TaskHistory{},
+		&model.Comment{},
+		&model.Attachment{},
+		&model.AuditLog{},
+		&model.ProjectPermission{},
+		&model.RolePermission{},
+		&model.UserGroup{},
+		&model.UserProjectRole{},
+		&model.ProjectUser{},
+		&model.TaskUser{},
+	)
+	if err != nil {
+		panic("Failed to auto migrate database")
+	}
 	return db
 }
 

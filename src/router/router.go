@@ -21,6 +21,7 @@ func Routes(app *fiber.App, db *gorm.DB) {
 	v1 := app.Group("/v1")
 	HealthCheckRoutes(v1, healthCheckService)
 	AuthRoutes(v1, authService, userService, tokenService, emailService)
+	ProjectRoutes(v1, taskService,userService)
 	UserRoutes(v1, userService, tokenService, taskService)
 	if !config.IsProd {
 		DocsRoutes(v1)

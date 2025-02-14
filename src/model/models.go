@@ -20,18 +20,18 @@ type BaseModel struct {
 }
 
 // ======= Пользователь =======
-
 type User struct {
 	BaseModel
 	Name               string              `gorm:"not null" json:"name"`
-	Email              string              `gorm:"uniqueIndex;not null" json:"email"`
-	Password           string              `gorm:"not null" json:"-"`
+	Email              string              `gorm:"uniqueIndex;not null" json:"email"` // Уникальный индекс для email	Password           string              `gorm:"not null" json:"-"`
 	Role               string              `gorm:"default:user;not null" json:"role"`
-	WorkTime           int                 `json:"work_time"`
+	WorkTime           int                 `gorm:""json:"work_time"`
+	Password           string              `gorm:"not null"json:"work_time"`
 	VerifiedEmail      bool                `gorm:"default:false;not null" json:"verified_email"`
 	ProjectPermissions []ProjectPermission `gorm:"foreignKey:UserID" json:"project_permissions"`
+	Projects           []Project           `gorm:"many2many:project_users;" json:"projects"`
+	Tasks              []Task              `gorm:"many2many:task_users;" json:"tasks"`
 }
-
 type Token struct {
 	BaseModel
 	Token   string    `gorm:"not null" json:"token"`
@@ -45,32 +45,46 @@ type Token struct {
 
 type Project struct {
 	BaseModel
-	Title string `gorm:"not null" json:"title"`
+	Title      string      `gorm:"not null" json:"title"`
+	Users      []User      `gorm:"many2many:project_users;" json:"users"`
+	UserGroups []UserGroup `gorm:"many2many:project_user_groups;" json:"user_groups"`
+}
+
+type ProjectUser struct {
+	ProjectID uuid.UUID `gorm:"primaryKey" json:"project_id"`
+	UserID    uuid.UUID `gorm:"primaryKey" json:"user_id"`
 }
 
 type Group struct {
 	BaseModel
-	Title     string    `gorm:"not null" json:"title"`
-	ProjectID uuid.UUID `gorm:"not null" json:"project_id"`
-	Project   Project   `gorm:"foreignKey:ProjectID;onDelete:CASCADE"`
+	Title     string     `gorm:"not null" json:"title"`
+	ProjectID uuid.UUID  `gorm:"not null" json:"project_id"`
+	UserGroup *uuid.UUID `json:"user_group,omitempty"`
+	Project   Project    `gorm:"foreignKey:ProjectID;onDelete:CASCADE"`
 }
 
 // ======= Задачи =======
-
 type Task struct {
 	BaseModel
-	ProjectID     uuid.UUID  `json:"project_id"`
-	Project       Project    `gorm:"foreignKey:ProjectID;onDelete:CASCADE"`
-	Title         string     `gorm:"not null" json:"title"`
-	Description   string     `json:"description"`
-	UserGroup     *uuid.UUID `json:"user_group,omitempty"`
-	Status        string     `json:"status"`
-	Priority      string     `json:"priority"`
-	DueDate       *time.Time `json:"due_date,omitempty"`
-	AssignedTo    *uuid.UUID `json:"assigned_to,omitempty"`
-	ParentTaskID  *uuid.UUID `json:"parent_task_id,omitempty"`
-	EstimatedTime int        `json:"estimated_time"`
-	SpentTime     int        `json:"spent_time"`
+	ProjectID     uuid.UUID   `json:"project_id"`
+	Project       Project     `gorm:"foreignKey:ProjectID;onDelete:CASCADE"`
+	Title         string      `gorm:"not null" json:"title"`
+	Description   string      `json:"description"`
+	UserGroup     *uuid.UUID  `json:"user_group,omitempty"`
+	Status        string      `json:"status"`
+	Priority      string      `json:"priority"`
+	DueDate       *time.Time  `json:"due_date,omitempty"`
+	AssignedTo    *uuid.UUID  `json:"assigned_to,omitempty"`
+	ParentTaskID  *uuid.UUID  `json:"parent_task_id,omitempty"`
+	EstimatedTime int         `json:"estimated_time"`
+	SpentTime     int         `json:"spent_time"`
+	Users         []User      `gorm:"many2many:task_users;" json:"users"`
+	UserGroups    []UserGroup `gorm:"many2many:task_user_groups;" json:"user_groups"`
+}
+
+type TaskUser struct {
+	TaskID uuid.UUID `gorm:"primaryKey" json:"task_id"`
+	UserID uuid.UUID `gorm:"primaryKey" json:"user_id"`
 }
 
 // ======= История задач =======
@@ -140,9 +154,12 @@ type RolePermission struct {
 
 type UserGroup struct {
 	BaseModel
-	UserID    uuid.UUID `gorm:"not null" json:"user_id"`
-	User      User      `gorm:"foreignKey:UserID;onDelete:CASCADE"`
 	TeamTitle string    `gorm:"not null" json:"team_title"`
+	OwnerID   uuid.UUID `gorm:"not null" json:"owner_id"` // Автор группы
+	Owner     User      `gorm:"foreignKey:OwnerID"`
+	Users     []User    `gorm:"many2many:user_group_users;" json:"users"`
+	Projects  []Project `gorm:"many2many:project_user_groups;" json:"projects"`
+	Tasks     []Task    `gorm:"many2many:task_user_groups;" json:"tasks"`
 }
 
 // ======= Роли пользователей в проекте =======

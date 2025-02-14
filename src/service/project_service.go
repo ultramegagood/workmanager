@@ -16,6 +16,12 @@ type TaskService interface {
 	CreateTask(c *fiber.Ctx, req *validation.CreateTask) (*model.Task, error)
 	CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*model.Group, error)
 	GetUsersWithAccess(taskID uuid.UUID) ([]uuid.UUID)
+	CreateUserGroup(c *fiber.Ctx, req *validation.CreateUserGroup) (*model.UserGroup, error)
+	AddUserToGroup(c *fiber.Ctx, req *validation.AddUserToGroup) error
+	AddGroupToProject(c *fiber.Ctx, req *validation.AddGroupToProject) error
+	AddGroupToTask(c *fiber.Ctx,req *validation.AddGroupToTask) error
+	GetUserGroups(c *fiber.Ctx) ([]model.UserGroup, error)
+	GetUsersInGroup(c *fiber.Ctx, req *validation.GetUsersInGroup) ([]model.User, error)
 }
 
 type taskService struct {
@@ -111,4 +117,115 @@ func (s *taskService) GetUsersWithAccess(taskID uuid.UUID) []uuid.UUID {
     }
 
     return userIDs
+}
+func (s *taskService) CreateUserGroup(c *fiber.Ctx, req *validation.CreateUserGroup) (*model.UserGroup, error) {
+	if err := s.Validate.Struct(req); err != nil {
+		return nil, err
+	}
+
+	userGroup := &model.UserGroup{
+		TeamTitle: req.TeamTitle,
+	}
+
+	if err := s.DB.WithContext(c.Context()).Create(userGroup).Error; err != nil {
+		s.Log.Errorf("Failed to create user group: %+v", err)
+		return nil, err
+	}
+
+	return userGroup, nil
+}
+func (s *taskService) AddUserToGroup(c *fiber.Ctx, req *validation.AddUserToGroup) error {
+	if err := s.Validate.Struct(req); err != nil {
+		return  err
+	}
+	// Проверяем, существует ли группа
+	var group model.UserGroup
+	if err := s.DB.First(&group, "id = ?", req.GroupID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	// Проверяем, существует ли пользователь
+	var user model.User
+	if err := s.DB.First(&user, "id = ?", req.UserID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "User not found")
+	}
+
+	// Добавляем пользователя в группу
+	if err := s.DB.Model(&group).Association("Users").Append(&user); err != nil {
+		s.Log.Errorf("Failed to add user to group: %+v", err)
+		return err
+	}
+
+	return nil
+}
+func (s *taskService) AddGroupToProject(c *fiber.Ctx, req *validation.AddGroupToProject) error {
+	if err := s.Validate.Struct(req); err != nil {
+		return  err
+	}
+	// Проверяем, существует ли проект
+	var project model.Project
+	if err := s.DB.First(&project, "id = ?", req.ProjectID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Project not found")
+	}
+
+	// Проверяем, существует ли группа
+	var group model.UserGroup
+	if err := s.DB.First(&group, "id = ?", req.GroupID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	// Добавляем группу к проекту
+	if err := s.DB.Model(&project).Association("UserGroups").Append(&group); err != nil {
+		s.Log.Errorf("Failed to add group to project: %+v", err)
+		return err
+	}
+
+	return nil
+}
+func (s *taskService) AddGroupToTask(c *fiber.Ctx, req *validation.AddGroupToTask) error {
+	if err := s.Validate.Struct(req); err != nil {
+		return  err
+	}
+	// Проверяем, существует ли задача
+	var task model.Task
+	if err := s.DB.First(&task, "id = ?", req.TaskID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Task not found")
+	}
+
+	// Проверяем, существует ли группа
+	var group model.UserGroup
+	if err := s.DB.First(&group, "id = ?", req.GroupID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	// Добавляем группу к задаче
+	if err := s.DB.Model(&task).Association("UserGroups").Append(&group); err != nil {
+	
+		
+		s.Log.Errorf("Failed to add group to task: %+v", err)
+		return err
+	}
+
+	return nil
+}
+func (s *taskService) GetUserGroups(c *fiber.Ctx) ([]model.UserGroup, error) {
+	var userGroups []model.UserGroup
+
+	if err := s.DB.WithContext(c.Context()).Find(&userGroups).Error; err != nil {
+		s.Log.Errorf("Failed to get user groups: %+v", err)
+		return nil, err
+	}
+
+	return userGroups, nil
+}
+func (s *taskService) GetUsersInGroup(c *fiber.Ctx, req *validation.GetUsersInGroup) ([]model.User, error) {
+	if err := s.Validate.Struct(req); err != nil {
+		return nil, err
+	}
+	var group model.UserGroup
+	if err := s.DB.Preload("Users").First(&group, "id = ?", req.GroupID).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	return group.Users, nil
 }

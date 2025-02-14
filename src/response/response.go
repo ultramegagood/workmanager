@@ -85,6 +85,12 @@ type SuccessWithTokens struct {
 	Tokens  Tokens     `json:"tokens"`
 }
 
+type SuccessWithData[T any] struct {
+	Code    int    `json:"code"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
+}
 type SuccessWithPaginate[T any] struct {
 	Code         int    `json:"code"`
 	Status       string `json:"status"`
@@ -101,4 +107,11 @@ type ErrorDetails struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Errors  interface{} `json:"errors"`
+}
+
+// ErrorResponse represents an error response.
+type ErrorResponse struct {
+	Code    int    `json:"code"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }

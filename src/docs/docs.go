@@ -59,23 +59,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/google": {
-            "get": {
-                "description": "This route initiates the Google OAuth2 login flow. Please try this in your browser.",
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Login with google",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/example.GoogleLoginResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -149,6 +132,36 @@ const docTemplate = `{
                         "description": "Not found",
                         "schema": {
                             "$ref": "#/definitions/example.NotFound"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Get current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithCurrentUser"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/example.Unauthorized"
                         }
                     }
                 }
@@ -343,6 +356,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/groups": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new group with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "Create a new group",
+                "parameters": [
+                    {
+                        "description": "Group creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.CreateGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_Group"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health-check": {
             "get": {
                 "description": "Check the status of services and database connections",
@@ -367,6 +425,390 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/example.HealthCheckResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new project with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Create a new project",
+                "parameters": [
+                    {
+                        "description": "Project creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.CreateProject"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/add-group": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a group to an existing project.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Add a group to a project",
+                "parameters": [
+                    {
+                        "description": "Add group to project request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.AddGroupToProject"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new task with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Create a new task",
+                "parameters": [
+                    {
+                        "description": "Task creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.CreateTask"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_Task"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/add-group": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a group to an existing task.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Add a group to a task",
+                "parameters": [
+                    {
+                        "description": "Add group to task request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.AddGroupToTask"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{taskID}/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of users who have access to a specific task.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get users with access to a task",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "taskID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-[]uuid_UUID"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-groups": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of all user groups.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserGroups"
+                ],
+                "summary": "Get all user groups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithPaginate-model_UserGroup"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user group with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserGroups"
+                ],
+                "summary": "Create a new user group",
+                "parameters": [
+                    {
+                        "description": "User group creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.CreateUserGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_UserGroup"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-groups/add-user": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a user to an existing group.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserGroups"
+                ],
+                "summary": "Add a user to a group",
+                "parameters": [
+                    {
+                        "description": "Add user to group request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.AddUserToGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-groups/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of users in a specific group.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserGroups"
+                ],
+                "summary": "Get users in a group",
+                "parameters": [
+                    {
+                        "description": "Get users in group request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.GetUsersInGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithPaginate-model_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -850,54 +1292,6 @@ const docTemplate = `{
                 }
             }
         },
-        "example.GoogleLoginResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 200
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Login successfully"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "success"
-                },
-                "tokens": {
-                    "$ref": "#/definitions/example.Tokens"
-                },
-                "user": {
-                    "$ref": "#/definitions/example.GoogleUser"
-                }
-            }
-        },
-        "example.GoogleUser": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "fake@example.com"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "e088d183-9eea-4a11-8d5d-74d7ec91bdf5"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "fake name"
-                },
-                "role": {
-                    "type": "string",
-                    "example": "user"
-                },
-                "verified_email": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
         "example.HealthCheck": {
             "type": "object",
             "properties": {
@@ -1232,6 +1626,533 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Group": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "project": {
+                    "$ref": "#/definitions/model.Project"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_group": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Project": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.UserGroup"
+                    }
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                }
+            }
+        },
+        "model.ProjectPermission": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "$ref": "#/definitions/model.Project"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/model.User"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Task": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "estimated_time": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "parent_task_id": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "project": {
+                    "$ref": "#/definitions/model.Project"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "spent_time": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_group": {
+                    "type": "string"
+                },
+                "user_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.UserGroup"
+                    }
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Уникальный индекс для email\tPassword           string              ` + "`" + `gorm:\"not null\" json:\"-\"` + "`" + `",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ProjectPermission"
+                    }
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Project"
+                    }
+                },
+                "role": {
+                    "type": "string"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Task"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "verified_email": {
+                    "type": "boolean"
+                },
+                "work_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UserGroup": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Project"
+                    }
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Task"
+                    }
+                },
+                "team_title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                }
+            }
+        },
+        "response.Common": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithCurrentUser": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/model.User"
+                }
+            }
+        },
+        "response.SuccessWithData-[]uuid_UUID": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithData-model_Group": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.Group"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithData-model_Project": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.Project"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithData-model_Task": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.Task"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithData-model_UserGroup": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.UserGroup"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithPaginate-model_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_results": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SuccessWithPaginate-model_UserGroup": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.UserGroup"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_results": {
+                    "type": "integer"
+                }
+            }
+        },
+        "validation.AddGroupToProject": {
+            "type": "object",
+            "required": [
+                "group_id",
+                "project_id"
+            ],
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "project_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "validation.AddGroupToTask": {
+            "type": "object",
+            "required": [
+                "group_id",
+                "task_id"
+            ],
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "task_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "validation.AddUserToGroup": {
+            "type": "object",
+            "required": [
+                "group_id",
+                "user_id"
+            ],
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "validation.CreateGroup": {
+            "type": "object",
+            "required": [
+                "project_id",
+                "title"
+            ],
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                },
+                "task_ids": {
+                    "description": "Было []string",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "fake name"
+                }
+            }
+        },
+        "validation.CreateProject": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "fake name"
+                }
+            }
+        },
+        "validation.CreateTask": {
+            "type": "object",
+            "required": [
+                "project_id",
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "parent_task_id": {
+                    "description": "Если есть parent task",
+                    "type": "string"
+                },
+                "project_id": {
+                    "description": "Добавил теги",
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "fake task"
+                }
+            }
+        },
         "validation.CreateUser": {
             "type": "object",
             "required": [
@@ -1268,6 +2189,24 @@ const docTemplate = `{
                 }
             }
         },
+        "validation.CreateUserGroup": {
+            "type": "object",
+            "required": [
+                "team_title",
+                "user_id"
+            ],
+            "properties": {
+                "team_title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Developers"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
         "validation.ForgotPassword": {
             "type": "object",
             "required": [
@@ -1278,6 +2217,18 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "example": "fake@example.com"
+                }
+            }
+        },
+        "validation.GetUsersInGroup": {
+            "type": "object",
+            "required": [
+                "group_id"
+            ],
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
