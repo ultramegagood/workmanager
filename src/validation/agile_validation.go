@@ -24,7 +24,7 @@ type CreateUserGroup struct {
 	UserID    uuid.UUID `json:"user_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 type AddUserToGroup struct {
-	GroupID uuid.UUID `json:"group_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	GroupID uuid.UUID `json:"user_group_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	UserID  uuid.UUID `json:"user_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 type AddGroupToProject struct {

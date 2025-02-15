@@ -266,7 +266,7 @@ func (tc *TaskController) GetUserGroups(c *fiber.Ctx) error {
 // @Param request body validation.GetUsersInGroup true "Get users in group request"
 // @Success 200 {object} response.SuccessWithPaginate[model.User]
 // @Failure 400 {object} response.ErrorResponse
-// @Router /user-groups/users [get]
+// @Router /user-groups/users [post]
 func (tc *TaskController) GetUsersInGroup(c *fiber.Ctx) error {
 	var req validation.GetUsersInGroup
 	if err := c.BodyParser(&req); err != nil {

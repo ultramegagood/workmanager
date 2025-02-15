@@ -770,7 +770,7 @@ const docTemplate = `{
             }
         },
         "/user-groups/users": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -1773,10 +1773,19 @@ const docTemplate = `{
                     "description": "Уникальный индекс для email\tPassword           string              ` + "`" + `gorm:\"not null\" json:\"-\"` + "`" + `",
                     "type": "string"
                 },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.UserGroup"
+                    }
+                },
                 "id": {
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 },
                 "project_permissions": {
@@ -1807,7 +1816,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "work_time": {
-                    "type": "string"
+                    "type": "integer"
                 }
             }
         },
@@ -1818,6 +1827,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "owner": {
+                    "$ref": "#/definitions/model.User"
+                },
+                "owner_id": {
+                    "description": "Автор группы",
                     "type": "string"
                 },
                 "projects": {
@@ -2077,11 +2093,11 @@ const docTemplate = `{
         "validation.AddUserToGroup": {
             "type": "object",
             "required": [
-                "group_id",
+                "user_group_id",
                 "user_id"
             ],
             "properties": {
-                "group_id": {
+                "user_group_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },

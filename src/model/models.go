@@ -26,11 +26,12 @@ type User struct {
 	Email              string              `gorm:"uniqueIndex;not null" json:"email"` // Уникальный индекс для email	Password           string              `gorm:"not null" json:"-"`
 	Role               string              `gorm:"default:user;not null" json:"role"`
 	WorkTime           int                 `gorm:""json:"work_time"`
-	Password           string              `gorm:"not null"json:"work_time"`
+	Password           string              `gorm:"not null"json:"password"`
 	VerifiedEmail      bool                `gorm:"default:false;not null" json:"verified_email"`
 	ProjectPermissions []ProjectPermission `gorm:"foreignKey:UserID" json:"project_permissions"`
 	Projects           []Project           `gorm:"many2many:project_users;" json:"projects"`
 	Tasks              []Task              `gorm:"many2many:task_users;" json:"tasks"`
+	Groups             []UserGroup         `gorm:"many2many:user_group_users"`
 }
 type Token struct {
 	BaseModel
@@ -155,9 +156,9 @@ type RolePermission struct {
 type UserGroup struct {
 	BaseModel
 	TeamTitle string    `gorm:"not null" json:"team_title"`
-	OwnerID   uuid.UUID `gorm:"not null" json:"owner_id"` // Автор группы
+	OwnerID   uuid.UUID `gorm:"" json:"owner_id"` // Автор группы
 	Owner     User      `gorm:"foreignKey:OwnerID"`
-	Users     []User    `gorm:"many2many:user_group_users;" json:"users"`
+	Users     []User    `gorm:"many2many:user_group_users;foreignKey:ID;joinForeignKey:UserGroupID;References:ID;joinReferences:UserID" json:"users"`
 	Projects  []Project `gorm:"many2many:project_user_groups;" json:"projects"`
 	Tasks     []Task    `gorm:"many2many:task_user_groups;" json:"tasks"`
 }
