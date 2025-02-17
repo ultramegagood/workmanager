@@ -39,3 +39,10 @@ type GetUsersInGroup struct {
 	GroupID uuid.UUID `json:"group_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
+type UpdateTaskTitleOrDescription struct {
+	TaskID  uuid.UUID `json:"task_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Title string `json:"title" validate:"required" example:"Title task"`
+	Description string `json:"description" validate:"required" example:"Lorem ipsum"`
+
+}
+

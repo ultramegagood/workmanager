@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"app/src/config"
 	"app/src/model"
 	"app/src/response"
 	"app/src/service"
+	"app/src/utils"
 	"app/src/validation"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -33,10 +36,22 @@ func NewTaskController(taskService service.TaskService) *TaskController {
 // @Router /projects [post]
 func (tc *TaskController) CreateProject(c *fiber.Ctx) error {
 	var req validation.CreateProject
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	project, err := tc.TaskService.CreateProject(c, &req)
+	project, err := tc.TaskService.CreateProject(c, &req, uuid.MustParse(userID))
 	if err != nil {
 		return err
 	}
@@ -283,3 +298,68 @@ func (tc *TaskController) GetUsersInGroup(c *fiber.Ctx) error {
 		Results: users,
 	})
 }
+
+// GetUsersInGroup retrieves users in a specific group.
+// @Summary Get users in a group
+// @Description Retrieve a list of users in a specific group.
+// @Tags UserGroups
+// @Accept json
+// @Produce json
+// @Security  BearerAuth
+// @Param request body validation.GetUsersInGroup true "Get users in group request"
+// @Success 200 {object} response.SuccessWithPaginate[model.User]
+// @Failure 400 {object} response.ErrorResponse
+// @Router /tasks [put]
+func (tc *TaskController) UpdateTaskTitleOrDescription(c *fiber.Ctx) error {
+
+	var req validation.UpdateTaskTitleOrDescription
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	 err := tc.TaskService.UpdateTaskTitleOrDescription(c, req.TaskID, req.Title,req.Description)
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithData[model.User]{
+		Code:    200,
+		Status:  "success",
+		Message: "Task updated successfully",
+	})
+}
+
+// GetProjects retrieves users in a specific group.
+// @Summary Get projects by user
+// @Description Retrieve a list of projects of user.
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Security  BearerAuth
+// @Success 200 {object} response.SuccessWithPaginate[model.Project]
+// @Failure 400 {object} response.ErrorResponse
+// @Router /projects [get]
+func (tc *TaskController) GetUserProjects(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+
+	projects, err := tc.TaskService.GetUserProjects(uuid.MustParse(userID))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch projects")
+	}
+
+	return c.JSON(response.SuccessWithPaginate[model.Project]{
+		Code:    200,
+		Status:  "success",
+		Message: "Projects fetched successfully",
+		Results: projects, // Была ошибка в имени переменной
+	})
+}
+

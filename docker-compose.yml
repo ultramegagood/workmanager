@@ -33,6 +33,27 @@ services:
     networks:
       - go-network
 
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - go-network
+
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - redisinsight:/db
+    networks:
+      - go-network
+
   go-app:
     build: .
     image: go-app
@@ -41,6 +62,8 @@ services:
     depends_on:
       postgresdb:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - .:/usr/src/go-app
     restart: on-failure
@@ -58,6 +81,8 @@ services:
 volumes:
   dbdata:
   pgadmin:
+  redisdata:
+  redisinsight:
 
 networks:
   go-network:

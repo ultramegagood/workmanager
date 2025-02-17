@@ -63,7 +63,7 @@ func setupFiberApp() *fiber.App {
 	app.Use(helmet.New())
 	app.Use(compress.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3001, http://your-frontend.com",
+		AllowOrigins:     "http://localhost:3001",
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",

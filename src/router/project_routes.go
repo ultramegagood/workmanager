@@ -12,6 +12,8 @@ func ProjectRoutes(v1 fiber.Router, t service.TaskService, u service.UserService
 	taskController := controller.NewTaskController(t)
 	// Проекты
 	v1.Post("/projects", m.Auth(u), taskController.CreateProject)
+	v1.Get("/projects", m.Auth(u), taskController.GetUserProjects)
+
 	// Задачи
 	v1.Post("/create-task", m.Auth(u), taskController.CreateTask)
 	// Группы
@@ -23,4 +25,6 @@ func ProjectRoutes(v1 fiber.Router, t service.TaskService, u service.UserService
 	v1.Post("/tasks/add-group", m.Auth(u), taskController.AddGroupToTask)
 	v1.Get("/user-groups", m.Auth(u), taskController.GetUserGroups)
 	v1.Post("/user-groups/users", m.Auth(u), taskController.GetUsersInGroup)
+	v1.Put("/tasks", m.Auth(u), taskController.GetUsersInGroup)
+
 }

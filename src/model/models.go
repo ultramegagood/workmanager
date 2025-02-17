@@ -98,17 +98,19 @@ type TaskHistory struct {
 }
 
 // ======= Комментарии =======
-
 type Comment struct {
 	BaseModel
 	TaskID    uuid.UUID  `gorm:"not null" json:"task_id"`
 	Task      Task       `gorm:"foreignKey:TaskID;onDelete:CASCADE"`
+	UserID    uuid.UUID  `gorm:"not null" json:"user_id"`  // Добавляем ID пользователя
+	User      User       `gorm:"foreignKey:UserID;onDelete:CASCADE" json:"user"` // Связь с пользователем
 	Body      string     `gorm:"not null" json:"body"`
 	CitateID  *uuid.UUID `json:"citate_id,omitempty"`
 	ReplyToID *uuid.UUID `json:"reply_to_id,omitempty"`
 	IsEdited  bool       `gorm:"default:false" json:"is_edited"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
+
 
 // ======= Вложения (Attachments) =======
 

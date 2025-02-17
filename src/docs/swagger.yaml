@@ -616,6 +616,27 @@ definitions:
       status:
         type: string
     type: object
+  response.SuccessWithPaginate-model_Project:
+    properties:
+      code:
+        type: integer
+      limit:
+        type: integer
+      message:
+        type: string
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/model.Project'
+        type: array
+      status:
+        type: string
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
   response.SuccessWithPaginate-model_User:
     properties:
       code:
@@ -1127,6 +1148,26 @@ paths:
       tags:
       - Health
   /projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of projects of user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithPaginate-model_Project'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get projects by user
+      tags:
+      - Projects
     post:
       consumes:
       - application/json
@@ -1210,6 +1251,33 @@ paths:
       summary: Create a new task
       tags:
       - Tasks
+    put:
+      consumes:
+      - application/json
+      description: Retrieve a list of users in a specific group.
+      parameters:
+      - description: Get users in group request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/validation.GetUsersInGroup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithPaginate-model_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get users in a group
+      tags:
+      - UserGroups
   /tasks/{taskID}/users:
     get:
       description: Retrieve a list of users who have access to a specific task.

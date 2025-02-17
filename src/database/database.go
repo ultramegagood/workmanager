@@ -25,6 +25,7 @@ func Connect(dbHost, dbName string) *gorm.DB {
 		PrepareStmt:            true,
 		TranslateError:         true,
 	})
+	
 	if err != nil {
 		utils.Log.Errorf("Failed to connect to database: %+v", err)
 	}
