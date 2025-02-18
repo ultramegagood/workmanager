@@ -2170,7 +2170,7 @@ const docTemplate = `{
                     }
                 },
                 "user_section_id": {
-                    "description": "Новая связь с UserSection",
+                    "description": "Should match UserSection.ID type",
                     "type": "string"
                 },
                 "users": {

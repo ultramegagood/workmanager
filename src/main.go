@@ -85,7 +85,6 @@ func setupFiberApp() *fiber.App {
 	})
 	router.SetupWebSocketRoutes(app)
 
-
 	return app
 }
 
@@ -95,6 +94,7 @@ func setupDatabase() *gorm.DB {
 	// Выполнение автомиграций
 
 	err := db.AutoMigrate(
+		&model.UserSection{}, // Ensure UserSection is included here
 		&model.User{},
 		&model.Token{},
 		&model.Project{},

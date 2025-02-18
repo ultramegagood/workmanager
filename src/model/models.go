@@ -78,7 +78,7 @@ type Task struct {
 	Priority      string      `json:"priority"`
 	DueDate       *time.Time  `json:"due_date,omitempty"`
 	SectionID     uuid.UUID   `gorm:"not null" json:"section_id"`
-	UserSectionID *uuid.UUID  `json:"user_section_id,omitempty"` // Новая связь с UserSection
+	UserSectionID *uuid.UUID  `json:"user_section_id,omitempty"` // Should match UserSection.ID type
 	AssignedTo    *uuid.UUID  `json:"assigned_to,omitempty"`
 	ParentTaskID  *uuid.UUID  `json:"parent_task_id,omitempty"`
 	EstimatedTime int         `json:"estimated_time"`
@@ -90,11 +90,11 @@ type Task struct {
 // ======= Секции пользователя =======
 type UserSection struct {
 	BaseModel
-	Title    string    `gorm:"not null" json:"title"`
-	UserID   uuid.UUID `gorm:"not null" json:"user_id"`
-	User     User      `gorm:"foreignKey:UserID;onDelete:CASCADE"`
-	Tasks    []Task    `gorm:"foreignKey:UserSectionID;constraint:OnDelete:CASCADE" json:"tasks,omitempty"`
-	Order    int       `gorm:"not null;default:0" json:"order"`
+	Title  string    `gorm:"not null" json:"title"`
+	UserID uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
+	User   User      `gorm:"foreignKey:UserID;onDelete:CASCADE"`
+	Tasks  []Task    `gorm:"foreignKey:UserSectionID;constraint:OnDelete:CASCADE" json:"tasks,omitempty"`
+	Order  int       `gorm:"not null;default:0" json:"order"`
 }
 
 type TaskUser struct {
