@@ -3,20 +3,25 @@ package validation
 import "github.com/google/uuid"
 
 type CreateProject struct {
-	Title    string      `json:"title" validate:"required,max=50" example:"fake name"`
+	Title string `json:"title" validate:"required,max=50" example:"fake name"`
 }
 
 type CreateGroup struct {
 	Title     string      `json:"title" validate:"required,max=50" example:"fake name"`
-	TaskIDs   []uuid.UUID `json:"task_ids"`  // Было []string
+	TaskIDs   []uuid.UUID `json:"task_ids"` // Было []string
 	ProjectID uuid.UUID   `json:"project_id" validate:"required,uuid"`
 }
 
 type CreateTask struct {
-	Title        string      `json:"title" validate:"required,max=50" example:"fake task"`
-	Description  string      `json:"description"`
-	ProjectID    uuid.UUID   `json:"project_id" validate:"required,uuid"`  // Добавил теги
-	ParentTaskID *uuid.UUID  `json:"parent_task_id,omitempty"` // Если есть parent task
+	Title        string     `json:"title" validate:"required,max=50" example:"fake task"`
+	Description  string     `json:"description"`
+	AssignedTo   *uuid.UUID `json:"assigned_to"`
+	ProjectID    uuid.UUID  `json:"project_id" validate:"required,uuid"` // Добавил теги
+	ParentTaskID *uuid.UUID `json:"parent_task_id,omitempty"`            // Если есть parent task
+}
+type CreateComment struct {
+	Body   string    `json:"body" validate:"required" example:"fake comment"`
+	TaskID uuid.UUID `json:"task_id" validate:"required,uuid"` // Добавил теги
 }
 
 type CreateUserGroup struct {
@@ -26,6 +31,10 @@ type CreateUserGroup struct {
 type AddUserToGroup struct {
 	GroupID uuid.UUID `json:"user_group_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	UserID  uuid.UUID `json:"user_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+}
+type ReassignTaskValidation struct {
+	TaskID uuid.UUID `json:"task_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	NewUserID  uuid.UUID `json:"new_user_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 type AddGroupToProject struct {
 	ProjectID uuid.UUID `json:"project_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
@@ -40,9 +49,7 @@ type GetUsersInGroup struct {
 }
 
 type UpdateTaskTitleOrDescription struct {
-	TaskID  uuid.UUID `json:"task_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
-	Title string `json:"title" validate:"required" example:"Title task"`
-	Description string `json:"description" validate:"required" example:"Lorem ipsum"`
-
+	TaskID      uuid.UUID `json:"task_id" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Title       string    `json:"title" validate:"required" example:"Title task"`
+	Description string    `json:"description" validate:"required" example:"Lorem ipsum"`
 }
-

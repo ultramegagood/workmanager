@@ -75,11 +75,22 @@ func (tc *TaskController) CreateProject(c *fiber.Ctx) error {
 // @Failure 400 {object} response.ErrorResponse
 // @Router /tasks [post]
 func (tc *TaskController) CreateTask(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
 	var req validation.CreateTask
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	task, err := tc.TaskService.CreateTask(c, &req)
+	task, err := tc.TaskService.CreateTask(c, &req, uuid.MustParse(userID))
 	if err != nil {
 		return err
 	}
@@ -91,30 +102,30 @@ func (tc *TaskController) CreateTask(c *fiber.Ctx) error {
 	})
 }
 
-// CreateGroup creates a new group.
-// @Summary Create a new group
-// @Description Create a new group with the provided details.
-// @Tags Groups
+// CreateSection creates a new group.
+// @Summary Create a new section
+// @Description Create a new section with the provided details.
+// @Tags Sections
 // @Accept json
 // @Produce json
 // @Security  BearerAuth
-// @Param request body validation.CreateGroup true "Group creation request"
-// @Success 200 {object} response.SuccessWithData[model.Group]
+// @Param request body validation.CreateGroup true "Project section creation request"
+// @Success 200 {object} response.SuccessWithData[model.Section]
 // @Failure 400 {object} response.ErrorResponse
-// @Router /groups [post]
-func (tc *TaskController) CreateGroup(c *fiber.Ctx) error {
+// @Router /projects/section [post]
+func (tc *TaskController) CreateSection(c *fiber.Ctx) error {
 	var req validation.CreateGroup
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	group, err := tc.TaskService.CreateGroup(c, &req)
+	group, err := tc.TaskService.CreateProjectSection(c, &req)
 	if err != nil {
 		return err
 	}
-	return c.JSON(response.SuccessWithData[model.Group]{
+	return c.JSON(response.SuccessWithData[model.Section]{
 		Code:    200,
 		Status:  "success",
-		Message: "Group created successfully",
+		Message: "Section added successfully",
 		Data:    *group,
 	})
 }
@@ -126,7 +137,7 @@ func (tc *TaskController) CreateGroup(c *fiber.Ctx) error {
 // @Produce json
 // @Security  BearerAuth
 // @Param taskID path string true "Task ID"
-// @Success 200 {object} response.SuccessWithData[[]uuid.UUID]
+// @Success 200 {object} response.SuccessWithData[[]model.User]
 // @Failure 400 {object} response.ErrorResponse
 // @Router /tasks/{taskID}/users [get]
 func (tc *TaskController) GetUsersWithAccess(c *fiber.Ctx) error {
@@ -135,7 +146,7 @@ func (tc *TaskController) GetUsersWithAccess(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid task ID")
 	}
 	users := tc.TaskService.GetUsersWithAccess(taskID)
-	return c.JSON(response.SuccessWithData[[]uuid.UUID]{
+	return c.JSON(response.SuccessWithData[[]model.User]{
 		Code:    200,
 		Status:  "success",
 		Message: "Users with access retrieved successfully",
@@ -225,7 +236,7 @@ func (tc *TaskController) AddGroupToProject(c *fiber.Ctx) error {
 
 // AddGroupToTask adds a group to a task.
 // @Summary Add a group to a task
-// @Description Add a group to an existing task.
+// @Description Добавление группы пользователей на задачу.
 // @Tags Tasks
 // @Accept json
 // @Produce json
@@ -299,10 +310,46 @@ func (tc *TaskController) GetUsersInGroup(c *fiber.Ctx) error {
 	})
 }
 
+// Get tasks of user.
+// @Summary Get tasks of user
+// @Description Retrieve a list of tasks.
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Security  BearerAuth
+// @Success 200 {object} response.SuccessWithPaginate[model.Task]
+// @Failure 400 {object} response.ErrorResponse
+// @Router /tasks [get]
+func (tc *TaskController) GetTasks(c *fiber.Ctx) error {
+	var tasks []model.Task
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	tasks, err = tc.TaskService.GetUserTasks(uuid.MustParse(userID))
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithPaginate[model.Task]{
+		Code:    200,
+		Status:  "success",
+		Message: "Users in group retrieved successfully",
+		Results: tasks,
+	})
+}
+
 // GetUsersInGroup retrieves users in a specific group.
 // @Summary Get users in a group
 // @Description Retrieve a list of users in a specific group.
-// @Tags UserGroups
+// @Tags Tasks
 // @Accept json
 // @Produce json
 // @Security  BearerAuth
@@ -316,7 +363,7 @@ func (tc *TaskController) UpdateTaskTitleOrDescription(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	 err := tc.TaskService.UpdateTaskTitleOrDescription(c, req.TaskID, req.Title,req.Description)
+	err := tc.TaskService.UpdateTaskTitleOrDescription(c, req.TaskID, req.Title, req.Description)
 	if err != nil {
 		return err
 	}
@@ -363,3 +410,172 @@ func (tc *TaskController) GetUserProjects(c *fiber.Ctx) error {
 	})
 }
 
+// Comment task.
+// @Summary Comment task
+// @Tags Comments
+// @Accept json
+// @Produce json
+// @Security  BearerAuth
+// @Param request body validation.CreateComment true "Create comment"
+// @Success 200 {object} response.SuccessWithData[model.Comment]
+// @Failure 400 {object} response.ErrorResponse
+// @Router /comments [post]
+func (tc *TaskController) CommentTask(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+	var req validation.CreateComment
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	comment, err := tc.TaskService.CreateComment(c, &req, uuid.MustParse(userID))
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithData[*model.Comment]{
+		Code:    200,
+		Status:  "success",
+		Message: "Comment send successfully",
+		Data:    comment,
+	})
+
+}
+
+// ReassignTask reassigns a task to a new user.
+// @Summary Reassign task to a new user
+// @Description Change the assignee of a task and notify via WebSocket.
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param taskID path string true "Task ID"
+// @Param request body validation.ReassignTaskValidation true "New assignee information"
+// @Success 200 {object} response.Common
+// @Failure 400 {object} response.ErrorResponse
+// @Router /tasks/{taskID}/reassign [put]
+func (tc *TaskController) ReassignTask(c *fiber.Ctx) error {
+	var req validation.ReassignTaskValidation
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request")
+	}
+
+	if err := tc.TaskService.ReassignTask(c, req); err != nil {
+		return err
+	}
+
+	return c.JSON(response.Common{
+		Code:    200,
+		Status:  "success",
+		Message: "Task successfully reassigned",
+	})
+}
+
+// Get task by ID.
+// @Summary Get task by ID
+// @Description Retrieve a task by its unique ID.
+// @Tags Tasks
+// @Produce json
+// @Security BearerAuth
+// @Param taskID path string true "Task ID"
+// @Success 200 {object} response.SuccessWithData[model.Task]
+// @Failure 404 {object} response.ErrorResponse
+// @Router /tasks/{taskID} [get]
+func (tc *TaskController) GetTaskByID(c *fiber.Ctx) error {
+	taskID, err := uuid.Parse(c.Params("taskID"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid task ID")
+	}
+	task, err := tc.TaskService.GetTaskByID(taskID)
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithData[model.Task]{
+		Code:    200,
+		Status:  "success",
+		Message: "Task retrieved successfully",
+		Data:    *task,
+	})
+}
+
+// Delete task by ID.
+// @Summary Delete task by ID
+// @Description Delete a task by its unique ID.
+// @Tags Tasks
+// @Security BearerAuth
+// @Param taskID path string true "Task ID"
+// @Success 200 {object} response.Common
+// @Failure 404 {object} response.ErrorResponse
+// @Router /tasks/{taskID} [delete]
+func (tc *TaskController) DeleteTask(c *fiber.Ctx) error {
+	taskID, err := uuid.Parse(c.Params("taskID"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid task ID")
+	}
+	if err := tc.TaskService.DeleteTask(taskID); err != nil {
+		return err
+	}
+	return c.JSON(response.Common{
+		Code:    200,
+		Status:  "success",
+		Message: "Task deleted successfully",
+	})
+}
+
+// Get sections by project ID.
+// @Summary Get sections of a project
+// @Description Retrieve all sections within a specific project.
+// @Tags Sections
+// @Produce json
+// @Security BearerAuth
+// @Param projectID path string true "Project ID"
+// @Success 200 {object} response.SuccessWithPaginate[model.Section]
+// @Failure 404 {object} response.ErrorResponse
+// @Router /projects/{projectID}/sections [get]
+func (tc *TaskController) GetSectionsByProject(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("projectID"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid project ID")
+	}
+	sections, err := tc.TaskService.GetSectionsByProject(projectID)
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithPaginate[model.Section]{
+		Code:    200,
+		Status:  "success",
+		Message: "Sections retrieved successfully",
+		Results: sections,
+	})
+}
+
+// Delete section by ID.
+// @Summary Delete section by ID
+// @Description Delete a section by its unique ID.
+// @Tags Sections
+// @Security BearerAuth
+// @Param sectionID path string true "Section ID"
+// @Success 200 {object} response.Common
+// @Failure 404 {object} response.ErrorResponse
+// @Router /sections/{sectionID} [delete]
+func (tc *TaskController) DeleteSection(c *fiber.Ctx) error {
+	sectionID, err := uuid.Parse(c.Params("sectionID"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid section ID")
+	}
+	if err := tc.TaskService.DeleteSection(sectionID); err != nil {
+		return err
+	}
+	return c.JSON(response.Common{
+		Code:    200,
+		Status:  "success",
+		Message: "Section deleted successfully",
+	})
+}

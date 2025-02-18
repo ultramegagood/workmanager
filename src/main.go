@@ -98,7 +98,7 @@ func setupDatabase() *gorm.DB {
 		&model.User{},
 		&model.Token{},
 		&model.Project{},
-		&model.Group{},
+		&model.Section{},
 		&model.Task{},
 		&model.TaskHistory{},
 		&model.Comment{},

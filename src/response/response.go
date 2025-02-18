@@ -1,6 +1,5 @@
 package response
 
-
 import "app/src/model"
 
 type SuccessWithProject struct {
@@ -18,10 +17,10 @@ type SuccessWithTask struct {
 }
 
 type SuccessWithGroup struct {
-	Code    int        `json:"code"`
-	Status  string     `json:"status"`
-	Message string     `json:"message"`
-	Group   model.Group `json:"group"`
+	Code    int           `json:"code"`
+	Status  string        `json:"status"`
+	Message string        `json:"message"`
+	Section   model.Section `json:"section"`
 }
 
 type SuccessWithPaginateProjects struct {
@@ -36,25 +35,25 @@ type SuccessWithPaginateProjects struct {
 }
 
 type SuccessWithPaginateTasks struct {
-	Code         int         `json:"code"`
-	Status       string      `json:"status"`
-	Message      string      `json:"message"`
+	Code         int          `json:"code"`
+	Status       string       `json:"status"`
+	Message      string       `json:"message"`
 	Results      []model.Task `json:"results"`
-	Page         int         `json:"page"`
-	Limit        int         `json:"limit"`
-	TotalPages   int64       `json:"total_pages"`
-	TotalResults int64       `json:"total_results"`
+	Page         int          `json:"page"`
+	Limit        int          `json:"limit"`
+	TotalPages   int64        `json:"total_pages"`
+	TotalResults int64        `json:"total_results"`
 }
 
 type SuccessWithPaginateGroups struct {
-	Code         int         `json:"code"`
-	Status       string      `json:"status"`
-	Message      string      `json:"message"`
-	Results      []model.Group `json:"results"`
-	Page         int         `json:"page"`
-	Limit        int         `json:"limit"`
-	TotalPages   int64       `json:"total_pages"`
-	TotalResults int64       `json:"total_results"`
+	Code         int             `json:"code"`
+	Status       string          `json:"status"`
+	Message      string          `json:"message"`
+	Results      []model.Section `json:"results"`
+	Page         int             `json:"page"`
+	Limit        int             `json:"limit"`
+	TotalPages   int64           `json:"total_pages"`
+	TotalResults int64           `json:"total_results"`
 }
 
 type Common struct {
@@ -75,7 +74,6 @@ type SuccessWithUser struct {
 	Message string     `json:"message"`
 	User    model.User `json:"user"`
 }
-
 
 type SuccessWithTokens struct {
 	Code    int        `json:"code"`

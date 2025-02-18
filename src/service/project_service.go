@@ -5,7 +5,9 @@ import (
 	"app/src/validation"
 	"context"
 	"encoding/json"
+
 	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -17,9 +19,9 @@ import (
 
 type TaskService interface {
 	CreateProject(c *fiber.Ctx, req *validation.CreateProject, userID uuid.UUID) (*model.Project, error)
-	CreateTask(c *fiber.Ctx, req *validation.CreateTask) (*model.Task, error)
-	CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*model.Group, error)
-	GetUsersWithAccess(taskID uuid.UUID) []uuid.UUID
+	CreateTask(c *fiber.Ctx, req *validation.CreateTask, userId uuid.UUID) (*model.Task, error)
+	CreateProjectSection(c *fiber.Ctx, req *validation.CreateGroup) (*model.Section, error)
+	GetUsersWithAccess(taskID uuid.UUID) []model.User
 	CreateUserGroup(c *fiber.Ctx, req *validation.CreateUserGroup) (*model.UserGroup, error)
 	AddUserToGroup(c *fiber.Ctx, req *validation.AddUserToGroup) error
 	AddGroupToProject(c *fiber.Ctx, req *validation.AddGroupToProject) error
@@ -27,8 +29,16 @@ type TaskService interface {
 	GetUserGroups(c *fiber.Ctx) ([]model.UserGroup, error)
 	GetUsersInGroup(c *fiber.Ctx, req *validation.GetUsersInGroup) ([]model.User, error)
 	HandleTaskUpdates(c *websocket.Conn)
+	GetUserTasks(userID uuid.UUID) ([]model.Task, error)
+	HandleCommentUpdates(c *websocket.Conn)
 	GetUserProjects(userID uuid.UUID) ([]model.Project, error)
 	UpdateTaskTitleOrDescription(c *fiber.Ctx, taskID uuid.UUID, title, description string) error
+	CreateComment(c *fiber.Ctx, req *validation.CreateComment, userID uuid.UUID) (*model.Comment, error)
+	ReassignTask(c *fiber.Ctx, req validation.ReassignTaskValidation) error
+	GetTaskByID(taskID uuid.UUID) (*model.Task, error)
+	DeleteTask(taskID uuid.UUID) error
+	GetSectionsByProject(projectID uuid.UUID) ([]model.Section, error)
+	DeleteSection(sectionID uuid.UUID) error
 }
 type taskService struct {
 	Log       *logrus.Logger
@@ -39,8 +49,9 @@ type taskService struct {
 }
 
 const (
-	debounceDuration   = 1 * time.Second
-	taskUpdatesChannel = "task_updates"
+	debounceDuration      = 1 * time.Second
+	taskUpdatesChannel    = "task_updates"
+	commentUpdatesChannel = "comment_updates"
 )
 
 func NewTaskService(db *gorm.DB, validate *validator.Validate) TaskService {
@@ -80,23 +91,38 @@ func (s *taskService) CreateProject(c *fiber.Ctx, req *validation.CreateProject,
 	tx.Commit()
 	return project, nil
 }
-
-
-func (s *taskService) CreateTask(c *fiber.Ctx, req *validation.CreateTask) (*model.Task, error) {
+func (s *taskService) CreateTask(c *fiber.Ctx, req *validation.CreateTask, userID uuid.UUID) (*model.Task, error) {
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
 	}
 
-	// Проверяем, существует ли проект
 	var project model.Project
 	if err := s.DB.First(&project, "id = ?", req.ProjectID).Error; err != nil {
 		return nil, fiber.NewError(fiber.StatusNotFound, "Project not found")
 	}
 
+	// Назначаем создателя задачи, если не передан другой пользователь
+	assignedTo := req.AssignedTo
+	if assignedTo == nil {
+		assignedTo = &userID
+	}
+
+	// Ищем секцию "Recently Assigned" пользователя
+	var userSection model.UserSection
+	if err := s.DB.
+		Where("user_id = ? AND title = ?", *assignedTo, "Recently Assigned").
+		First(&userSection).Error; err != nil {
+		s.Log.Warnf("UserSection 'Recently Assigned' not found for user %s", assignedTo)
+		return nil, fiber.NewError(fiber.StatusNotFound, "User section not found")
+	}
+
+	// Создаем таск
 	task := &model.Task{
 		Title:       req.Title,
 		Description: req.Description,
 		ProjectID:   req.ProjectID,
+		AssignedTo:  assignedTo,
+		SectionID:   userSection.ID, // Назначаем в первую секцию
 	}
 
 	if err := s.DB.WithContext(c.Context()).Create(task).Error; err != nil {
@@ -104,10 +130,43 @@ func (s *taskService) CreateTask(c *fiber.Ctx, req *validation.CreateTask) (*mod
 		return nil, err
 	}
 
+	// Отправка WebSocket-обновления
+	go s.broadcastTaskUpdate(task.ID, "created")
+
 	return task, nil
 }
 
-func (s *taskService) CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*model.Group, error) {
+// Функция переназначения таска
+func (s *taskService) ReassignTask(c *fiber.Ctx, req validation.ReassignTaskValidation) error {
+	var task model.Task
+	if err := s.DB.First(&task, "id = ?", req.TaskID).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Task not found")
+	}
+
+	// Ищем новую секцию "Recently Assigned" для нового исполнителя
+	var userSection model.UserSection
+	if err := s.DB.
+		Where("user_id = ? AND title = ?", req.NewUserID, "Recently Assigned").
+		First(&userSection).Error; err != nil {
+		s.Log.Warnf("UserSection 'Recently Assigned' not found for user %s", req.NewUserID)
+		return fiber.NewError(fiber.StatusNotFound, "User section not found")
+	}
+
+	// Обновляем исполнителя и секцию
+	task.AssignedTo = &req.NewUserID
+	task.SectionID = userSection.ID
+
+	if err := s.DB.WithContext(c.Context()).Save(&task).Error; err != nil {
+		s.Log.Errorf("Failed to reassign task: %+v", err)
+		return err
+	}
+
+	// Отправка WebSocket-сообщения
+	go s.broadcastTaskUpdate(task.ID, "reassigned")
+
+	return nil
+}
+func (s *taskService) CreateProjectSection(c *fiber.Ctx, req *validation.CreateGroup) (*model.Section, error) {
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
 	}
@@ -118,34 +177,57 @@ func (s *taskService) CreateGroup(c *fiber.Ctx, req *validation.CreateGroup) (*m
 		return nil, fiber.NewError(fiber.StatusNotFound, "Project not found")
 	}
 
-	group := &model.Group{
+	section := &model.Section{
 		Title:     req.Title,
 		ProjectID: req.ProjectID,
 	}
-
-	if err := s.DB.WithContext(c.Context()).Create(group).Error; err != nil {
-		s.Log.Errorf("Failed to create group: %+v", err)
+	if err := s.DB.WithContext(c.Context()).Create(section).Error; err != nil {
+		s.Log.Errorf("Failed to create section: %+v", err)
 		return nil, err
 	}
+	return section, nil
 
-	return group, nil
+	return section, nil
 }
-func (s *taskService) GetUsersWithAccess(taskID uuid.UUID) []uuid.UUID {
-	var userIDs []uuid.UUID
+func (s *taskService) GetUsersWithAccess(taskID uuid.UUID) []model.User {
+	var users []model.User
 
 	err := s.DB.Raw(`
-        SELECT DISTINCT ug.user_id 
-        FROM user_groups ug
+        SELECT DISTINCT u.* 
+        FROM users u
+        INNER JOIN user_groups ug ON u.id = ug.user_id
         INNER JOIN tasks t ON ug.id = t.user_group
         WHERE t.id = ?
-    `, taskID).Scan(&userIDs).Error
+    `, taskID).Scan(&users).Error
 
 	if err != nil {
 		s.Log.Errorf("DB error in GetUsersWithAccess: %+v", err)
+		return nil
 	}
 
-	return userIDs
+	return users
 }
+
+func (s *taskService) GetUserTasks(userID uuid.UUID) ([]model.Task, error) {
+	var tasks []model.Task
+
+	// Проверяем, существует ли пользователь
+	var user model.User
+	if err := s.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	// Получаем задачи, связанные с этим пользователем
+	if err := s.DB.
+		Joins("JOIN user_tasks ON user_tasks.task_id = tasks.id").
+		Where("user_tasks.user_id = ?", userID).
+		Find(&tasks).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Group not found")
+	}
+
+	return tasks, nil
+}
+
 func (s *taskService) CreateUserGroup(c *fiber.Ctx, req *validation.CreateUserGroup) (*model.UserGroup, error) {
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
@@ -258,20 +340,19 @@ func (s *taskService) GetUsersInGroup(c *fiber.Ctx, req *validation.GetUsersInGr
 	return group.Users, nil
 }
 func (s *taskService) GetUserProjects(userID uuid.UUID) ([]model.Project, error) {
-	
-	var projects []model.Project
-	 err := s.DB.
-    Joins("JOIN project_users ON project_users.project_id = projects.id").
-    Where("project_users.user_id = ?", userID).
-    Preload("Users"). // Загружаем пользователей в проекте
-    Find(&projects).Error
 
-	if(err !=nil){
+	var projects []model.Project
+	err := s.DB.
+		Joins("JOIN project_users ON project_users.project_id = projects.id").
+		Where("project_users.user_id = ?", userID).
+		Preload("Users"). // Загружаем пользователей в проекте
+		Find(&projects).Error
+
+	if err != nil {
 		return nil, fiber.NewError(fiber.StatusNotFound, "Projects not found")
 	}
 	return projects, nil
 }
-
 
 func (s *taskService) UpdateTaskTitleOrDescription(c *fiber.Ctx, taskID uuid.UUID, title, description string) error {
 	// Публикуем изменение в Redis
@@ -338,46 +419,45 @@ func (s *taskService) UpdateTaskHandler(c *fiber.Ctx) error {
 	return s.UpdateTaskTitleOrDescription(c, req.TaskID, req.Title, req.Description)
 }
 
-
 func (s *taskService) HandleTaskUpdates(c *websocket.Conn) {
-    ctx := context.Background()
-    pubsub := s.Redis.Subscribe(ctx, taskUpdatesChannel)
-    defer pubsub.Close()
+	ctx := context.Background()
+	pubsub := s.Redis.Subscribe(ctx, taskUpdatesChannel)
+	defer pubsub.Close()
 
-    // Создаем канал для отслеживания закрытия соединения
-    done := make(chan struct{})
-    defer close(done)
+	// Создаем канал для отслеживания закрытия соединения
+	done := make(chan struct{})
+	defer close(done)
 
-    // Запускаем горутину для чтения сообщений
-    go func() {
-        for {
-            select {
-            case <-done:
-                return
-            default:
-                _, _, err := c.ReadMessage()
-                if err != nil {
-                    // При ошибке чтения закрываем соединение
-                    c.Close()
-                    return
-                }
-            }
-        }
-    }()
+	// Запускаем горутину для чтения сообщений
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				_, _, err := c.ReadMessage()
+				if err != nil {
+					// При ошибке чтения закрываем соединение
+					c.Close()
+					return
+				}
+			}
+		}
+	}()
 
-    ch := pubsub.Channel()
-    for {
-        select {
-        case msg := <-ch:
-            err := c.WriteJSON(decodeMessage(msg.Payload))
-            if err != nil {
-                s.Log.Errorf("WebSocket write error: %v", err)
-                return
-            }
-        case <-done:
-            return
-        }
-    }
+	ch := pubsub.Channel()
+	for {
+		select {
+		case msg := <-ch:
+			err := c.WriteJSON(decodeMessage(msg.Payload))
+			if err != nil {
+				s.Log.Errorf("WebSocket write error: %v", err)
+				return
+			}
+		case <-done:
+			return
+		}
+	}
 }
 
 func decodeMessage(payload string) map[string]interface{} {
@@ -386,4 +466,118 @@ func decodeMessage(payload string) map[string]interface{} {
 		return nil
 	}
 	return data
+}
+func (s *taskService) HandleCommentUpdates(c *websocket.Conn) {
+	ctx := context.Background()
+	pubsub := s.Redis.Subscribe(ctx, commentUpdatesChannel)
+	defer pubsub.Close()
+
+	for {
+		msg, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			s.Log.Errorf("Ошибка подписки на комментарии: %v", err)
+			break
+		}
+
+		// Отправляем полученное сообщение всем подключённым клиентам
+		if err := c.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
+			s.Log.Errorf("Ошибка отправки комментария: %v", err)
+			break
+		}
+	}
+}
+func (s *taskService) CreateComment(c *fiber.Ctx, req *validation.CreateComment, userID uuid.UUID) (*model.Comment, error) {
+	if err := s.Validate.Struct(req); err != nil {
+		return nil, err
+	}
+
+	comment := &model.Comment{
+		Body:   req.Body,
+		TaskID: req.TaskID,
+		UserID: userID,
+	}
+
+	if err := s.DB.WithContext(c.Context()).Create(comment).Error; err != nil {
+		s.Log.Errorf("Ошибка создания комментария: %+v", err)
+		return nil, err
+	}
+
+	// Публикация комментария в Redis
+	commentJSON, _ := json.Marshal(comment)
+	if err := s.Redis.Publish(context.Background(), commentUpdatesChannel, commentJSON).Err(); err != nil {
+		s.Log.Errorf("Ошибка публикации комментария в Redis: %v", err)
+	}
+
+	return comment, nil
+}
+
+func (s *taskService) broadcastTaskUpdate(taskID uuid.UUID, action string) {
+	update := map[string]interface{}{
+		"task_id": taskID,
+		"action":  action,
+	}
+	data, _ := json.Marshal(update)
+	s.Redis.Publish(context.Background(), taskUpdatesChannel, data)
+}
+
+// Реализация в taskService:
+func (s *taskService) GetTaskByID(taskID uuid.UUID) (*model.Task, error) {
+    var task model.Task
+    if err := s.DB.
+        Preload("Comments").
+        Preload("UserGroups").
+        First(&task, "id = ?", taskID).Error; err != nil {
+        return nil, fiber.NewError(fiber.StatusNotFound, "Task not found")
+    }
+    return &task, nil
+}
+
+func (s *taskService) DeleteTask(taskID uuid.UUID) error {
+    return s.DB.Transaction(func(tx *gorm.DB) error {
+        // Удаляем связи задачи с группами
+        if err := tx.Exec("DELETE FROM task_user_groups WHERE task_id = ?", taskID).Error; err != nil {
+            return err
+        }
+        
+        // Удаляем саму задачу
+        if err := tx.Delete(&model.Task{}, "id = ?", taskID).Error; err != nil {
+            return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete task")
+        }
+        return nil
+    })
+}
+
+func (s *taskService) GetSectionsByProject(projectID uuid.UUID) ([]model.Section, error) {
+    var sections []model.Section
+    if err := s.DB.
+        Where("project_id = ?", projectID).
+        Preload("Tasks").
+        Find(&sections).Error; err != nil {
+        return nil, fiber.NewError(fiber.StatusNotFound, "Sections not found")
+    }
+    return sections, nil
+}
+
+func (s *taskService) DeleteSection(sectionID uuid.UUID) error {
+    return s.DB.Transaction(func(tx *gorm.DB) error {
+        // Переносим задачи в дефолтную секцию
+        var defaultSection model.Section
+        if err := tx.FirstOrCreate(&defaultSection, 
+            model.Section{Title: "Backlog", ProjectID: uuid.Nil}).Error; err != nil {
+            return err
+        }
+
+        if err := tx.Model(&model.Task{}).
+            Where("section_id = ?", sectionID).
+            Update("section_id", defaultSection.ID).Error; err != nil {
+            return err
+        }
+
+        // Удаляем секцию
+        if err := tx.Delete(&model.Section{}, "id = ?", sectionID).Error; err != nil {
+            return err
+        }
+        
+        return nil
+    })
 }

@@ -375,21 +375,34 @@ definitions:
         example: success
         type: string
     type: object
-  model.Group:
+  model.Comment:
     properties:
+      body:
+        type: string
+      citate_id:
+        type: string
       created_at:
+        type: string
+      deleted_at:
         type: string
       id:
         type: string
-      project:
-        $ref: '#/definitions/model.Project'
-      project_id:
+      is_edited:
+        type: boolean
+      reply_to_id:
         type: string
-      title:
+      task:
+        $ref: '#/definitions/model.Task'
+      task_id:
         type: string
       updated_at:
         type: string
-      user_group:
+      user:
+        allOf:
+        - $ref: '#/definitions/model.User'
+        description: Связь с пользователем
+      user_id:
+        description: Добавляем ID пользователя
         type: string
     type: object
   model.Project:
@@ -424,6 +437,29 @@ definitions:
       user_id:
         type: string
     type: object
+  model.Section:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      order:
+        type: integer
+      project:
+        $ref: '#/definitions/model.Project'
+      project_id:
+        type: string
+      tasks:
+        items:
+          $ref: '#/definitions/model.Task'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_group:
+        type: string
+    type: object
   model.Task:
     properties:
       assigned_to:
@@ -446,6 +482,8 @@ definitions:
         $ref: '#/definitions/model.Project'
       project_id:
         type: string
+      section_id:
+        type: string
       spent_time:
         type: integer
       status:
@@ -460,6 +498,9 @@ definitions:
         items:
           $ref: '#/definitions/model.UserGroup'
         type: array
+      user_section_id:
+        description: Новая связь с UserSection
+        type: string
       users:
         items:
           $ref: '#/definitions/model.User'
@@ -561,23 +602,25 @@ definitions:
       user:
         $ref: '#/definitions/model.User'
     type: object
-  response.SuccessWithData-[]uuid_UUID:
+  response.SuccessWithData-array_model_User:
     properties:
       code:
         type: integer
       data:
-        type: string
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
       message:
         type: string
       status:
         type: string
     type: object
-  response.SuccessWithData-model_Group:
+  response.SuccessWithData-model_Comment:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/model.Group'
+        $ref: '#/definitions/model.Comment'
       message:
         type: string
       status:
@@ -589,6 +632,17 @@ definitions:
         type: integer
       data:
         $ref: '#/definitions/model.Project'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.SuccessWithData-model_Section:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/model.Section'
       message:
         type: string
       status:
@@ -629,6 +683,48 @@ definitions:
       results:
         items:
           $ref: '#/definitions/model.Project'
+        type: array
+      status:
+        type: string
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  response.SuccessWithPaginate-model_Section:
+    properties:
+      code:
+        type: integer
+      limit:
+        type: integer
+      message:
+        type: string
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/model.Section'
+        type: array
+      status:
+        type: string
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  response.SuccessWithPaginate-model_Task:
+    properties:
+      code:
+        type: integer
+      limit:
+        type: integer
+      message:
+        type: string
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/model.Task'
         type: array
       status:
         type: string
@@ -715,6 +811,18 @@ definitions:
     - user_group_id
     - user_id
     type: object
+  validation.CreateComment:
+    properties:
+      body:
+        example: fake comment
+        type: string
+      task_id:
+        description: Добавил теги
+        type: string
+    required:
+    - body
+    - task_id
+    type: object
   validation.CreateGroup:
     properties:
       project_id:
@@ -743,6 +851,8 @@ definitions:
     type: object
   validation.CreateTask:
     properties:
+      assigned_to:
+        type: string
       description:
         type: string
       parent_task_id:
@@ -831,6 +941,18 @@ definitions:
     required:
     - email
     - password
+    type: object
+  validation.ReassignTaskValidation:
+    properties:
+      new_user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      task_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - new_user_id
+    - task_id
     type: object
   validation.Register:
     properties:
@@ -1100,34 +1222,33 @@ paths:
       summary: Verify email
       tags:
       - Auth
-  /groups:
+  /comments:
     post:
       consumes:
       - application/json
-      description: Create a new group with the provided details.
       parameters:
-      - description: Group creation request
+      - description: Create comment
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/validation.CreateGroup'
+          $ref: '#/definitions/validation.CreateComment'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.SuccessWithData-model_Group'
+            $ref: '#/definitions/response.SuccessWithData-model_Comment'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a new group
+      summary: Comment task
       tags:
-      - Groups
+      - Comments
   /health-check:
     get:
       consumes:
@@ -1195,6 +1316,31 @@ paths:
       summary: Create a new project
       tags:
       - Projects
+  /projects/{projectID}/sections:
+    get:
+      description: Retrieve all sections within a specific project.
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithPaginate-model_Section'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sections of a project
+      tags:
+      - Sections
   /projects/add-group:
     post:
       consumes:
@@ -1223,7 +1369,78 @@ paths:
       summary: Add a group to a project
       tags:
       - Projects
+  /projects/section:
+    post:
+      consumes:
+      - application/json
+      description: Create a new section with the provided details.
+      parameters:
+      - description: Project section creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/validation.CreateGroup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithData-model_Section'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new section
+      tags:
+      - Sections
+  /sections/{sectionID}:
+    delete:
+      description: Delete a section by its unique ID.
+      parameters:
+      - description: Section ID
+        in: path
+        name: sectionID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Common'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete section by ID
+      tags:
+      - Sections
   /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of tasks.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithPaginate-model_Task'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get tasks of user
+      tags:
+      - Tasks
     post:
       consumes:
       - application/json
@@ -1277,7 +1494,87 @@ paths:
       - BearerAuth: []
       summary: Get users in a group
       tags:
-      - UserGroups
+      - Tasks
+  /tasks/{taskID}:
+    delete:
+      description: Delete a task by its unique ID.
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Common'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete task by ID
+      tags:
+      - Tasks
+    get:
+      description: Retrieve a task by its unique ID.
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithData-model_Task'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get task by ID
+      tags:
+      - Tasks
+  /tasks/{taskID}/reassign:
+    put:
+      consumes:
+      - application/json
+      description: Change the assignee of a task and notify via WebSocket.
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskID
+        required: true
+        type: string
+      - description: New assignee information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/validation.ReassignTaskValidation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Common'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reassign task to a new user
+      tags:
+      - Tasks
   /tasks/{taskID}/users:
     get:
       description: Retrieve a list of users who have access to a specific task.
@@ -1293,7 +1590,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.SuccessWithData-[]uuid_UUID'
+            $ref: '#/definitions/response.SuccessWithData-array_model_User'
         "400":
           description: Bad Request
           schema:
@@ -1307,7 +1604,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add a group to an existing task.
+      description: Добавление группы пользователей на задачу.
       parameters:
       - description: Add group to task request
         in: body

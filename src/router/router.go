@@ -32,6 +32,8 @@ func Routes(app *fiber.App, db *gorm.DB) {
 	app.Get("/ws/tasks", websocket.New(func(c *websocket.Conn) {
 		taskService.HandleTaskUpdates(c)
 	}))
+	app.Get("/ws/comments", websocket.New(taskService.HandleCommentUpdates))
+
 	if !config.IsProd {
 		DocsRoutes(v1)
 	}

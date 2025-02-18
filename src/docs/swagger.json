@@ -349,14 +349,13 @@
                 }
             }
         },
-        "/groups": {
+        "/comments": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new group with the provided details.",
                 "consumes": [
                     "application/json"
                 ],
@@ -364,17 +363,17 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Groups"
+                    "Comments"
                 ],
-                "summary": "Create a new group",
+                "summary": "Comment task",
                 "parameters": [
                     {
-                        "description": "Group creation request",
+                        "description": "Create comment",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/validation.CreateGroup"
+                            "$ref": "#/definitions/validation.CreateComment"
                         }
                     }
                 ],
@@ -382,7 +381,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.SuccessWithData-model_Group"
+                            "$ref": "#/definitions/response.SuccessWithData-model_Comment"
                         }
                     },
                     "400": {
@@ -545,7 +544,161 @@
                 }
             }
         },
+        "/projects/section": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new section with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sections"
+                ],
+                "summary": "Create a new section",
+                "parameters": [
+                    {
+                        "description": "Project section creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.CreateGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_Section"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectID}/sections": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all sections within a specific project.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sections"
+                ],
+                "summary": "Get sections of a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithPaginate-model_Section"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sections/{sectionID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a section by its unique ID.",
+                "tags": [
+                    "Sections"
+                ],
+                "summary": "Delete section by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Section ID",
+                        "name": "sectionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of tasks.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get tasks of user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithPaginate-model_Task"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -560,7 +713,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "UserGroups"
+                    "Tasks"
                 ],
                 "summary": "Get users in a group",
                 "parameters": [
@@ -640,7 +793,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Add a group to an existing task.",
+                "description": "Добавление группы пользователей на задачу.",
                 "consumes": [
                     "application/json"
                 ],
@@ -659,6 +812,133 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/validation.AddGroupToTask"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{taskID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a task by its unique ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get task by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "taskID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessWithData-model_Task"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a task by its unique ID.",
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Delete task by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "taskID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Common"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{taskID}/reassign": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change the assignee of a task and notify via WebSocket.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Reassign task to a new user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "taskID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New assignee information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/validation.ReassignTaskValidation"
                         }
                     }
                 ],
@@ -706,7 +986,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.SuccessWithData-[]uuid_UUID"
+                            "$ref": "#/definitions/response.SuccessWithData-array_model_User"
                         }
                     },
                     "400": {
@@ -1694,28 +1974,49 @@
                 }
             }
         },
-        "model.Group": {
+        "model.Comment": {
             "type": "object",
             "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "citate_id": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "project": {
-                    "$ref": "#/definitions/model.Project"
+                "is_edited": {
+                    "type": "boolean"
                 },
-                "project_id": {
+                "reply_to_id": {
                     "type": "string"
                 },
-                "title": {
+                "task": {
+                    "$ref": "#/definitions/model.Task"
+                },
+                "task_id": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
                 },
-                "user_group": {
+                "user": {
+                    "description": "Связь с пользователем",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "description": "Добавляем ID пользователя",
                     "type": "string"
                 }
             }
@@ -1769,6 +2070,41 @@
                 }
             }
         },
+        "model.Section": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "project": {
+                    "$ref": "#/definitions/model.Project"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Task"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_group": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Task": {
             "type": "object",
             "properties": {
@@ -1802,6 +2138,9 @@
                 "project_id": {
                     "type": "string"
                 },
+                "section_id": {
+                    "type": "string"
+                },
                 "spent_time": {
                     "type": "integer"
                 },
@@ -1822,6 +2161,10 @@
                     "items": {
                         "$ref": "#/definitions/model.UserGroup"
                     }
+                },
+                "user_section_id": {
+                    "description": "Новая связь с UserSection",
+                    "type": "string"
                 },
                 "users": {
                     "type": "array",
@@ -1975,14 +2318,17 @@
                 }
             }
         },
-        "response.SuccessWithData-[]uuid_UUID": {
+        "response.SuccessWithData-array_model_User": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "integer"
                 },
                 "data": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
                 },
                 "message": {
                     "type": "string"
@@ -1992,14 +2338,14 @@
                 }
             }
         },
-        "response.SuccessWithData-model_Group": {
+        "response.SuccessWithData-model_Comment": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "integer"
                 },
                 "data": {
-                    "$ref": "#/definitions/model.Group"
+                    "$ref": "#/definitions/model.Comment"
                 },
                 "message": {
                     "type": "string"
@@ -2017,6 +2363,23 @@
                 },
                 "data": {
                     "$ref": "#/definitions/model.Project"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SuccessWithData-model_Section": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.Section"
                 },
                 "message": {
                     "type": "string"
@@ -2079,6 +2442,70 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.Project"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_results": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SuccessWithPaginate-model_Section": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Section"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_results": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SuccessWithPaginate-model_Task": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Task"
                     }
                 },
                 "status": {
@@ -2207,6 +2634,23 @@
                 }
             }
         },
+        "validation.CreateComment": {
+            "type": "object",
+            "required": [
+                "body",
+                "task_id"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "fake comment"
+                },
+                "task_id": {
+                    "description": "Добавил теги",
+                    "type": "string"
+                }
+            }
+        },
         "validation.CreateGroup": {
             "type": "object",
             "required": [
@@ -2251,6 +2695,9 @@
                 "title"
             ],
             "properties": {
+                "assigned_to": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -2365,6 +2812,23 @@
                     "maxLength": 20,
                     "minLength": 8,
                     "example": "password1"
+                }
+            }
+        },
+        "validation.ReassignTaskValidation": {
+            "type": "object",
+            "required": [
+                "new_user_id",
+                "task_id"
+            ],
+            "properties": {
+                "new_user_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "task_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },

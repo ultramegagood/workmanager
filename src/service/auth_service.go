@@ -44,7 +44,6 @@ func NewAuthService(
 		TokenService: tokenService,
 	}
 }
-
 func (s *authService) Register(c *fiber.Ctx, req *validation.Register) (*model.User, error) {
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
@@ -69,9 +68,24 @@ func (s *authService) Register(c *fiber.Ctx, req *validation.Register) (*model.U
 
 	if result.Error != nil {
 		s.Log.Errorf("Failed create user: %+v", result.Error)
+		return nil, result.Error
 	}
 
-	return user, result.Error
+	// Создаем секции для пользователя
+	sections := []model.UserSection{
+		{Title: "Recently Assigned", UserID: user.ID, Order: 1},
+		{Title: "Do Today", UserID: user.ID, Order: 2},
+		{Title: "Do Next Week", UserID: user.ID, Order: 3},
+	}
+
+	for _, section := range sections {
+		if err := s.DB.WithContext(c.Context()).Create(&section).Error; err != nil {
+			s.Log.Errorf("Failed to create user section: %+v", err)
+			return nil, err
+		}
+	}
+
+	return user, nil
 }
 
 func (s *authService) Login(c *fiber.Ctx, req *validation.Login) (*model.User, error) {

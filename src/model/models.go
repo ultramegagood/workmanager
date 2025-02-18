@@ -56,12 +56,14 @@ type ProjectUser struct {
 	UserID    uuid.UUID `gorm:"primaryKey" json:"user_id"`
 }
 
-type Group struct {
+type Section struct {
 	BaseModel
 	Title     string     `gorm:"not null" json:"title"`
 	ProjectID uuid.UUID  `gorm:"not null" json:"project_id"`
 	UserGroup *uuid.UUID `json:"user_group,omitempty"`
 	Project   Project    `gorm:"foreignKey:ProjectID;onDelete:CASCADE"`
+	Tasks     []Task     `gorm:"foreignKey:SectionID;constraint:OnDelete:CASCADE" json:"tasks,omitempty"`
+	Order     int        `gorm:"not null;default:0" json:"order"`
 }
 
 // ======= Задачи =======
@@ -75,12 +77,24 @@ type Task struct {
 	Status        string      `json:"status"`
 	Priority      string      `json:"priority"`
 	DueDate       *time.Time  `json:"due_date,omitempty"`
+	SectionID     uuid.UUID   `gorm:"not null" json:"section_id"`
+	UserSectionID *uuid.UUID  `json:"user_section_id,omitempty"` // Новая связь с UserSection
 	AssignedTo    *uuid.UUID  `json:"assigned_to,omitempty"`
 	ParentTaskID  *uuid.UUID  `json:"parent_task_id,omitempty"`
 	EstimatedTime int         `json:"estimated_time"`
 	SpentTime     int         `json:"spent_time"`
 	Users         []User      `gorm:"many2many:task_users;" json:"users"`
 	UserGroups    []UserGroup `gorm:"many2many:task_user_groups;" json:"user_groups"`
+}
+
+// ======= Секции пользователя =======
+type UserSection struct {
+	BaseModel
+	Title    string    `gorm:"not null" json:"title"`
+	UserID   uuid.UUID `gorm:"not null" json:"user_id"`
+	User     User      `gorm:"foreignKey:UserID;onDelete:CASCADE"`
+	Tasks    []Task    `gorm:"foreignKey:UserSectionID;constraint:OnDelete:CASCADE" json:"tasks,omitempty"`
+	Order    int       `gorm:"not null;default:0" json:"order"`
 }
 
 type TaskUser struct {
@@ -102,7 +116,7 @@ type Comment struct {
 	BaseModel
 	TaskID    uuid.UUID  `gorm:"not null" json:"task_id"`
 	Task      Task       `gorm:"foreignKey:TaskID;onDelete:CASCADE"`
-	UserID    uuid.UUID  `gorm:"not null" json:"user_id"`  // Добавляем ID пользователя
+	UserID    uuid.UUID  `gorm:"not null" json:"user_id"`                        // Добавляем ID пользователя
 	User      User       `gorm:"foreignKey:UserID;onDelete:CASCADE" json:"user"` // Связь с пользователем
 	Body      string     `gorm:"not null" json:"body"`
 	CitateID  *uuid.UUID `json:"citate_id,omitempty"`
@@ -110,7 +124,6 @@ type Comment struct {
 	IsEdited  bool       `gorm:"default:false" json:"is_edited"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
-
 
 // ======= Вложения (Attachments) =======
 
