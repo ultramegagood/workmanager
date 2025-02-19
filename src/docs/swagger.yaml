@@ -573,6 +573,27 @@ definitions:
           $ref: '#/definitions/model.User'
         type: array
     type: object
+  model.UserSection:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      order:
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/model.Task'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/model.User'
+      user_id:
+        type: string
+    type: object
   response.Common:
     properties:
       code:
@@ -767,6 +788,27 @@ definitions:
       results:
         items:
           $ref: '#/definitions/model.UserGroup'
+        type: array
+      status:
+        type: string
+      total_pages:
+        type: integer
+      total_results:
+        type: integer
+    type: object
+  response.SuccessWithPaginate-model_UserSection:
+    properties:
+      code:
+        type: integer
+      limit:
+        type: integer
+      message:
+        type: string
+      page:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/model.UserSection'
         type: array
       status:
         type: string
@@ -1395,6 +1437,25 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a new section
+      tags:
+      - Sections
+  /sections:
+    get:
+      description: Retrieve all sections within a specific user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessWithPaginate-model_UserSection'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sections of user
       tags:
       - Sections
   /sections/{sectionID}:

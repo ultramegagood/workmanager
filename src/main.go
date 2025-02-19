@@ -40,6 +40,7 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	config.InitRedis()
 
 	app := setupFiberApp()
 	db := setupDatabase()
@@ -83,7 +84,15 @@ func setupFiberApp() *fiber.App {
 		}
 		return fiber.ErrUpgradeRequired
 	})
-	router.SetupWebSocketRoutes(app)
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		// Проверяем, является ли запрос WebSocket-подключением
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	
 
 	return app
 }

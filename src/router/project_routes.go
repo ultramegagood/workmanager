@@ -10,7 +10,7 @@ import (
 
 func ProjectRoutes(v1 fiber.Router, t service.TaskService, u service.UserService) {
 	taskController := controller.NewTaskController(t)
-	
+
 	// Проекты
 	v1.Post("/projects", m.Auth(u), taskController.CreateProject)
 	v1.Get("/projects", m.Auth(u), taskController.GetUserProjects)
@@ -20,6 +20,7 @@ func ProjectRoutes(v1 fiber.Router, t service.TaskService, u service.UserService
 	// Секции
 	v1.Post("/projects/section", m.Auth(u), taskController.CreateSection)
 	v1.Delete("/sections/:sectionID", m.Auth(u), taskController.DeleteSection)
+	v1.Get("/sections", m.Auth(u), taskController.GetSectionsByUser)
 
 	// Задачи
 	v1.Post("/tasks", m.Auth(u), taskController.CreateTask)

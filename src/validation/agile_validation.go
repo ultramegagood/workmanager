@@ -11,6 +11,9 @@ type CreateGroup struct {
 	TaskIDs   []uuid.UUID `json:"task_ids"` // Было []string
 	ProjectID uuid.UUID   `json:"project_id" validate:"required,uuid"`
 }
+type GetProjectSection struct {
+	ProjectID uuid.UUID   `json:"project_id" validate:"required,uuid"`
+}
 
 type CreateTask struct {
 	Title        string     `json:"title" validate:"required,max=50" example:"fake task"`

@@ -556,6 +556,39 @@ func (tc *TaskController) GetSectionsByProject(c *fiber.Ctx) error {
 	})
 }
 
+// Get sections by user ID.
+// @Summary Get sections of user
+// @Description Retrieve all sections within a specific user.
+// @Tags Sections
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.SuccessWithPaginate[model.UserSection]
+// @Failure 404 {object} response.ErrorResponse
+// @Router /sections [get]
+func (tc *TaskController) GetSectionsByUser(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+
+	if token == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Please authenticate")
+	}
+
+	userID, err := utils.VerifyToken(token, config.JWTSecret, config.TokenTypeAccess)
+	if err != nil {
+		return err
+	}
+	sections, err := tc.TaskService.GetSectionsByUser(uuid.MustParse(userID))
+	if err != nil {
+		return err
+	}
+	return c.JSON(response.SuccessWithPaginate[model.UserSection]{
+		Code:    200,
+		Status:  "success",
+		Message: "Sections retrieved successfully",
+		Results: sections,
+	})
+}
+
 // Delete section by ID.
 // @Summary Delete section by ID
 // @Description Delete a section by its unique ID.

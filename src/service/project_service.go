@@ -29,6 +29,7 @@ type TaskService interface {
 	GetUserGroups(c *fiber.Ctx) ([]model.UserGroup, error)
 	GetUsersInGroup(c *fiber.Ctx, req *validation.GetUsersInGroup) ([]model.User, error)
 	HandleTaskUpdates(c *websocket.Conn)
+	HandleProjectUpdates(c *websocket.Conn)
 	GetUserTasks(userID uuid.UUID) ([]model.Task, error)
 	HandleCommentUpdates(c *websocket.Conn)
 	GetUserProjects(userID uuid.UUID) ([]model.Project, error)
@@ -38,8 +39,20 @@ type TaskService interface {
 	GetTaskByID(taskID uuid.UUID) (*model.Task, error)
 	DeleteTask(taskID uuid.UUID) error
 	GetSectionsByProject(projectID uuid.UUID) ([]model.Section, error)
+	GetSectionsByUser(userID uuid.UUID) ([]model.UserSection, error)
 	DeleteSection(sectionID uuid.UUID) error
+
 }
+
+func NewTaskService(db *gorm.DB, validate *validator.Validate, redisClient *redis.Client) TaskService {
+	return &taskService{
+		Log:      logrus.New(),
+		DB:       db,
+		Validate: validate,
+		Redis:    redisClient,
+	}
+}
+
 type taskService struct {
 	Log       *logrus.Logger
 	DB        *gorm.DB
@@ -48,18 +61,20 @@ type taskService struct {
 	WebSocket *websocket.Conn
 }
 
+
 const (
 	debounceDuration      = 1 * time.Second
-	taskUpdatesChannel    = "task_updates"
-	commentUpdatesChannel = "comment_updates"
+    taskUpdatesChannel    = "task_updates"
+    commentUpdatesChannel = "comment_updates"
+    projectUpdatesChannel = "project_updates"
 )
 
-func NewTaskService(db *gorm.DB, validate *validator.Validate) TaskService {
-	return &taskService{
-		Log:      logrus.New(),
-		DB:       db,
-		Validate: validate,
-	}
+// Общий тип для WebSocket сообщений
+type WSMessage struct {
+    Entity    string      `json:"entity"`   // "task", "comment", "project"
+    Action    string      `json:"action"`   // "created", "updated", "deleted"
+    Data      interface{} `json:"data"`
+    Timestamp time.Time   `json:"timestamp"`
 }
 func (s *taskService) CreateProject(c *fiber.Ctx, req *validation.CreateProject, userID uuid.UUID) (*model.Project, error) {
 	if err := s.Validate.Struct(req); err != nil {
@@ -131,8 +146,12 @@ func (s *taskService) CreateTask(c *fiber.Ctx, req *validation.CreateTask, userI
 	}
 
 	// Отправка WebSocket-обновления
-	go s.broadcastTaskUpdate(task.ID, "created")
-
+	go s.publishUpdate(context.Background(), commentUpdatesChannel, WSMessage{
+        Entity:    "task",
+        Action:    "created",
+        Data:      task,
+        Timestamp: time.Now(),
+    })
 	return task, nil
 }
 
@@ -162,8 +181,12 @@ func (s *taskService) ReassignTask(c *fiber.Ctx, req validation.ReassignTaskVali
 	}
 
 	// Отправка WebSocket-сообщения
-	go s.broadcastTaskUpdate(task.ID, "reassigned")
-
+	go s.publishUpdate(context.Background(), commentUpdatesChannel, WSMessage{
+        Entity:    "task",
+        Action:    "reassigned",
+        Data:      task,
+        Timestamp: time.Now(),
+    })
 	return nil
 }
 func (s *taskService) CreateProjectSection(c *fiber.Ctx, req *validation.CreateGroup) (*model.Section, error) {
@@ -187,8 +210,8 @@ func (s *taskService) CreateProjectSection(c *fiber.Ctx, req *validation.CreateG
 	}
 	return section, nil
 
-	return section, nil
 }
+
 func (s *taskService) GetUsersWithAccess(taskID uuid.UUID) []model.User {
 	var users []model.User
 
@@ -401,91 +424,71 @@ func (s *taskService) debouncedSaveToPostgres(taskID uuid.UUID, title, descripti
 		s.Log.Errorf("Failed to save task updates: %v", err)
 	}
 }
-func (s *taskService) UpdateTaskHandler(c *fiber.Ctx) error {
-	var req struct {
-		TaskID      uuid.UUID `json:"task_id" validate:"required"`
-		Title       string    `json:"title"`
-		Description string    `json:"description"`
-	}
+// Общий обработчик WebSocket
+func (s *taskService) HandleUpdates(c *websocket.Conn, channels ...string) {
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
+    defer c.Close()
 
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid request")
-	}
+    // Подписываемся на все указанные каналы
+    pubsub := s.Redis.Subscribe(ctx, channels...)
+    defer pubsub.Close()
 
-	if err := s.Validate.Struct(req); err != nil {
-		return err
-	}
+    ch := pubsub.Channel()
 
-	return s.UpdateTaskTitleOrDescription(c, req.TaskID, req.Title, req.Description)
+    // Горутина для чтения из WebSocket
+    go func() {
+        for {
+            var msg WSMessage
+            if err := c.ReadJSON(&msg); err != nil {
+				s.Log.Errorf("Invalid WebSocket message format: %s", (err))
+                continue
+            }
+            // Публикуем полученное сообщение в Redis
+            if err := s.publishUpdate(ctx, msg.Entity+"_updates", msg); err != nil {
+                s.Log.Errorf("Publish error: %v", err)
+            }
+        }
+    }()
+
+    // Основной цикл обработки сообщений из Redis
+    for {
+        select {
+        case msg := <-ch:
+            if err := c.WriteJSON(WSMessage{
+                Timestamp: time.Now(),
+                Data:      json.RawMessage(msg.Payload),
+            }); err != nil {
+                s.Log.Errorf("WebSocket write error:", err)
+                continue
+            }
+        case <-ctx.Done():
+            return
+        }
+    }
+}
+// Вспомогательный метод для публикации обновлений
+func (s *taskService) publishUpdate(ctx context.Context, channel string, data interface{}) error {
+    payload, err := json.Marshal(data)
+    if err != nil {
+        return err
+    }
+    return s.Redis.Publish(ctx, channel, payload).Err()
 }
 
+// Обновленные обработчики для конкретных сущностей
 func (s *taskService) HandleTaskUpdates(c *websocket.Conn) {
-	ctx := context.Background()
-	pubsub := s.Redis.Subscribe(ctx, taskUpdatesChannel)
-	defer pubsub.Close()
-
-	// Создаем канал для отслеживания закрытия соединения
-	done := make(chan struct{})
-	defer close(done)
-
-	// Запускаем горутину для чтения сообщений
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			default:
-				_, _, err := c.ReadMessage()
-				if err != nil {
-					// При ошибке чтения закрываем соединение
-					c.Close()
-					return
-				}
-			}
-		}
-	}()
-
-	ch := pubsub.Channel()
-	for {
-		select {
-		case msg := <-ch:
-			err := c.WriteJSON(decodeMessage(msg.Payload))
-			if err != nil {
-				s.Log.Errorf("WebSocket write error: %v", err)
-				return
-			}
-		case <-done:
-			return
-		}
-	}
+    s.HandleUpdates(c, taskUpdatesChannel)
 }
 
-func decodeMessage(payload string) map[string]interface{} {
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(payload), &data); err != nil {
-		return nil
-	}
-	return data
-}
 func (s *taskService) HandleCommentUpdates(c *websocket.Conn) {
-	ctx := context.Background()
-	pubsub := s.Redis.Subscribe(ctx, commentUpdatesChannel)
-	defer pubsub.Close()
-
-	for {
-		msg, err := pubsub.ReceiveMessage(ctx)
-		if err != nil {
-			s.Log.Errorf("Ошибка подписки на комментарии: %v", err)
-			break
-		}
-
-		// Отправляем полученное сообщение всем подключённым клиентам
-		if err := c.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
-			s.Log.Errorf("Ошибка отправки комментария: %v", err)
-			break
-		}
-	}
+    s.HandleUpdates(c, commentUpdatesChannel)
 }
+
+func (s *taskService) HandleProjectUpdates(c *websocket.Conn) {
+    s.HandleUpdates(c, projectUpdatesChannel)
+}
+
 func (s *taskService) CreateComment(c *fiber.Ctx, req *validation.CreateComment, userID uuid.UUID) (*model.Comment, error) {
 	if err := s.Validate.Struct(req); err != nil {
 		return nil, err
@@ -503,81 +506,84 @@ func (s *taskService) CreateComment(c *fiber.Ctx, req *validation.CreateComment,
 	}
 
 	// Публикация комментария в Redis
-	commentJSON, _ := json.Marshal(comment)
-	if err := s.Redis.Publish(context.Background(), commentUpdatesChannel, commentJSON).Err(); err != nil {
-		s.Log.Errorf("Ошибка публикации комментария в Redis: %v", err)
-	}
+	go s.publishUpdate(context.Background(), commentUpdatesChannel, WSMessage{
+        Entity:    "comment",
+        Action:    "created",
+        Data:      comment,
+        Timestamp: time.Now(),
+    })
 
 	return comment, nil
 }
 
-func (s *taskService) broadcastTaskUpdate(taskID uuid.UUID, action string) {
-	update := map[string]interface{}{
-		"task_id": taskID,
-		"action":  action,
-	}
-	data, _ := json.Marshal(update)
-	s.Redis.Publish(context.Background(), taskUpdatesChannel, data)
-}
-
 // Реализация в taskService:
 func (s *taskService) GetTaskByID(taskID uuid.UUID) (*model.Task, error) {
-    var task model.Task
-    if err := s.DB.
-        Preload("Comments").
-        Preload("UserGroups").
-        First(&task, "id = ?", taskID).Error; err != nil {
-        return nil, fiber.NewError(fiber.StatusNotFound, "Task not found")
-    }
-    return &task, nil
+	var task model.Task
+	if err := s.DB.
+		Preload("Comments").
+		Preload("UserGroups").
+		First(&task, "id = ?", taskID).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Task not found")
+	}
+	return &task, nil
 }
 
 func (s *taskService) DeleteTask(taskID uuid.UUID) error {
-    return s.DB.Transaction(func(tx *gorm.DB) error {
-        // Удаляем связи задачи с группами
-        if err := tx.Exec("DELETE FROM task_user_groups WHERE task_id = ?", taskID).Error; err != nil {
-            return err
-        }
-        
-        // Удаляем саму задачу
-        if err := tx.Delete(&model.Task{}, "id = ?", taskID).Error; err != nil {
-            return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete task")
-        }
-        return nil
-    })
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		// Удаляем связи задачи с группами
+		if err := tx.Exec("DELETE FROM task_user_groups WHERE task_id = ?", taskID).Error; err != nil {
+			return err
+		}
+
+		// Удаляем саму задачу
+		if err := tx.Delete(&model.Task{}, "id = ?", taskID).Error; err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete task")
+		}
+		return nil
+	})
 }
 
 func (s *taskService) GetSectionsByProject(projectID uuid.UUID) ([]model.Section, error) {
-    var sections []model.Section
-    if err := s.DB.
-        Where("project_id = ?", projectID).
-        Preload("Tasks").
-        Find(&sections).Error; err != nil {
-        return nil, fiber.NewError(fiber.StatusNotFound, "Sections not found")
-    }
-    return sections, nil
+	var sections []model.Section
+	if err := s.DB.
+		Where("project_id = ?", projectID).
+		Preload("Tasks").
+		Find(&sections).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Sections not found")
+	}
+	return sections, nil
+}
+func (s *taskService) GetSectionsByUser(userID uuid.UUID) ([]model.UserSection, error) {
+	var sections []model.UserSection
+	if err := s.DB.
+		Where("user_id = ?", userID).
+		Preload("Tasks").
+		Find(&sections).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Sections not found")
+	}
+	return sections, nil
 }
 
 func (s *taskService) DeleteSection(sectionID uuid.UUID) error {
-    return s.DB.Transaction(func(tx *gorm.DB) error {
-        // Переносим задачи в дефолтную секцию
-        var defaultSection model.Section
-        if err := tx.FirstOrCreate(&defaultSection, 
-            model.Section{Title: "Backlog", ProjectID: uuid.Nil}).Error; err != nil {
-            return err
-        }
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		// Переносим задачи в дефолтную секцию
+		var defaultSection model.Section
+		if err := tx.FirstOrCreate(&defaultSection,
+			model.Section{Title: "Backlog", ProjectID: uuid.Nil}).Error; err != nil {
+			return err
+		}
 
-        if err := tx.Model(&model.Task{}).
-            Where("section_id = ?", sectionID).
-            Update("section_id", defaultSection.ID).Error; err != nil {
-            return err
-        }
+		if err := tx.Model(&model.Task{}).
+			Where("section_id = ?", sectionID).
+			Update("section_id", defaultSection.ID).Error; err != nil {
+			return err
+		}
 
-        // Удаляем секцию
-        if err := tx.Delete(&model.Section{}, "id = ?", sectionID).Error; err != nil {
-            return err
-        }
-        
-        return nil
-    })
+		// Удаляем секцию
+		if err := tx.Delete(&model.Section{}, "id = ?", sectionID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
